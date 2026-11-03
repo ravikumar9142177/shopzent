@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard.html
+Disallow: /checkout.html
+Disallow: /payment.html
+Disallow: /payment-submit.html
+Sitemap: https://YOUR-DOMAIN/sitemap.xml

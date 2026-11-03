@@ -1,0 +1,40 @@
+# SHOPZENT — apply database migrations and deploy Edge Functions to Supabase.
+# Manual only (Actions tab → "Deploy backend" → Run workflow), so the database never changes by surprise.
+# Secrets needed: SUPABASE_ACCESS_TOKEN (supabase.com → Account → Access Tokens),
+#                 SUPABASE_DB_PASSWORD (the database password you chose), SUPABASE_PROJECT_REF (e.g. abcdefghijklmnop)
+# Function secrets (ALLOWED_ORIGINS, TURNSTILE_SECRET, VIRUSTOTAL_API_KEY) are set once with
+#   supabase secrets set ...   — see SETUP.md step 6.
+name: Deploy backend
+on:
+  workflow_dispatch:
+    inputs:
+      what:
+        description: "migrations, functions, or both"
+        required: true
+        default: both
+        type: choice
+        options: [both, migrations, functions]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Link project
+        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Apply migrations
+        if: ${{ inputs.what != 'functions' }}
+        run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+      - name: Deploy Edge Functions
+        if: ${{ inputs.what != 'migrations' }}
+        run: |
+          supabase functions deploy login-guard --project-ref "$PROJECT_REF" --no-verify-jwt
+          supabase functions deploy apk-verify --project-ref "$PROJECT_REF"

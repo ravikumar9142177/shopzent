@@ -1,0 +1,75 @@
+# Supabase CLI project config for SHOPZENT (used by `supabase start` locally and as a reference
+# for the hosted project's Auth settings — the hosted dashboard is the source of truth there).
+project_id = "shopzent"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[db.seed]
+enabled = false   # seed data lives in migrations/0009_seed.sql
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"   # free-tier global per-file limit; APKs above this need a paid plan
+
+[auth]
+enabled = true
+# CHANGE to your real site, e.g. "https://shopzent.in" or "https://<user>.github.io/<repo>"
+site_url = "https://YOUR-SITE.example"
+additional_redirect_urls = [
+  "https://YOUR-SITE.example/reset-password.html",
+  "https://YOUR-SITE.example/login.html",
+  "http://localhost:8080/reset-password.html",
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+minimum_password_length = 10
+password_requirements = "lower_upper_letters_digits"
+
+[auth.rate_limit]
+email_sent = 4
+token_refresh = 150
+sign_in_sign_ups = 30
+token_verifications = 30
+
+[auth.email]
+enabled = true
+double_confirm_changes = true
+enable_confirmations = true
+secure_password_change = true
+max_frequency = "60s"
+otp_expiry = 3600
+
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.mfa.phone]
+enroll_enabled = false
+verify_enabled = false
+
+# Optional CAPTCHA on Supabase Auth itself (in addition to login-guard). Secret goes in env, never in this file.
+# [auth.captcha]
+# enabled = true
+# provider = "turnstile"
+# secret = "env(TURNSTILE_SECRET)"
+
+[functions.login-guard]
+verify_jwt = false   # it is the login endpoint; it validates input itself
+
+[functions.apk-verify]
+verify_jwt = true    # caller must send the admin's session; the function also checks is_admin() (aal2)

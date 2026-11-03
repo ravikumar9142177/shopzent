@@ -1,0 +1,100 @@
+# SHOPZENT — build & deploy the static site to GitHub Pages.
+# Runs on every push to main (and by hand from the Actions tab).
+# Settings → Secrets and variables → Actions:
+#   Variables:  SUPABASE_URL, SITE_URL (e.g. https://www.shopzent.in or https://USERNAME.github.io/REPO)
+#   Secrets:    SUPABASE_ANON_KEY   (the PUBLIC anon key — never the service_role key)
+#   Optional variable: CAPTCHA_SITE_KEY (Cloudflare Turnstile public site key)
+#   Optional variable: GOOGLE_LOGIN = false hides "Continue with Google" until the Google provider is set up in Supabase
+# Settings → Pages → Source: "GitHub Actions".
+# Custom domain: put a file named CNAME (one line, e.g. shopzent.in) in the repo root or in site/.
+#   If SITE_URL is not set, it becomes https://<that domain>; the CNAME file is copied into the published site.
+#   (With Actions deploys GitHub takes the domain from Settings → Pages → Custom domain — set it there too.)
+name: Deploy site
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/workflows/deploy-site.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare site folder
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          CAPTCHA_SITE_KEY: ${{ vars.CAPTCHA_SITE_KEY }}
+          GOOGLE_LOGIN: ${{ vars.GOOGLE_LOGIN }}
+        run: |
+          set -euo pipefail
+          rm -rf _site && cp -r site _site
+          SITE_URL="${SITE_URL%/}"
+          # custom domain from a CNAME file (repo root wins over site/CNAME)
+          CNAME_DOMAIN=""
+          for f in CNAME site/CNAME; do
+            if [ -f "$f" ]; then CNAME_DOMAIN=$(head -n1 "$f" | tr -d '[:space:]' | tr 'A-Z' 'a-z' | sed -E 's#^https?://##; s#/.*$##'); break; fi
+          done
+          if [ -n "$CNAME_DOMAIN" ]; then
+            if ! echo "$CNAME_DOMAIN" | grep -Eq '^[a-z0-9-]+(\.[a-z0-9-]+)+$'; then echo "::error::CNAME file does not contain a valid domain: $CNAME_DOMAIN"; exit 1; fi
+            echo "$CNAME_DOMAIN" > _site/CNAME
+            if [ -z "$SITE_URL" ]; then SITE_URL="https://$CNAME_DOMAIN"; echo "::notice::SITE_URL taken from the CNAME file: $SITE_URL"; fi
+          fi
+          export SITE_URL
+          if [ -z "$SITE_URL" ]; then echo "::warning::SITE_URL variable is not set — sitemap/robots keep the placeholder"; fi
+          # Refuse to publish a service_role key by mistake (its JWT payload says role=service_role)
+          if [ -n "$SUPABASE_ANON_KEY" ]; then
+            PAYLOAD=$(echo "$SUPABASE_ANON_KEY" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null || true)
+            if echo "$PAYLOAD" | grep -q service_role; then echo "::error::SUPABASE_ANON_KEY is a service_role key. Use the anon public key."; exit 1; fi
+          fi
+          python3 - <<'PY'
+          import json, os, re, pathlib
+          p = pathlib.Path('_site/js/config.js'); t = p.read_text()
+          for k in ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SITE_URL', 'CAPTCHA_SITE_KEY']:
+              v = os.environ.get(k, '').strip().rstrip('/') if k == 'SITE_URL' else os.environ.get(k, '').strip()
+              if v: t = re.sub(rf'{k}: "[^"]*"', f'{k}: {json.dumps(v)}', t)
+          # GOOGLE_LOGIN repo variable: 'false' hides the Google button (until the Google provider is enabled in Supabase)
+          if os.environ.get('GOOGLE_LOGIN', '').strip().lower() == 'false':
+              t = re.sub(r'GOOGLE_LOGIN: true', 'GOOGLE_LOGIN: false', t)
+          # Live mode: the preview-only admin hash is not needed in the public bundle — drop it
+          if os.environ.get('SUPABASE_URL', '').strip() and os.environ.get('SUPABASE_ANON_KEY', '').strip():
+              t = re.sub(r'\n\s*DEMO_ADMIN: \{[^}]*\}', '', t)
+          p.write_text(t)
+          site = os.environ.get('SITE_URL', '').strip().rstrip('/')
+          if site:
+              for f in ['_site/sitemap.xml', '_site/robots.txt']:
+                  q = pathlib.Path(f); q.write_text(q.read_text().replace('https://YOUR-DOMAIN', site))
+              # absolute share image + static canonical link on every page (search engines read it without JS)
+              for h in pathlib.Path('_site').rglob('*.html'):
+                  s = h.read_text(); s = re.sub(r'content="(?:\.\./)?assets/og\.png"', f'content="{site}/assets/og.png"', s)
+                  rel = h.relative_to('_site').as_posix(); url = site + '/' + ('' if rel == 'index.html' else rel)
+                  s = s.replace('<link rel="canonical" href="" data-canonical>', f'<link rel="canonical" href="{url}" data-canonical>')
+                  h.write_text(s)
+              # 404.html is served from any depth: give it a base so its relative links work
+              from urllib.parse import urlparse
+              base = (urlparse(site).path.rstrip('/') or '') + '/'
+              n = pathlib.Path('_site/404.html'); s = n.read_text()
+              if '<base ' not in s: n.write_text(s.replace('<head>', f'<head>\n<base href="{base}">', 1))
+          PY
+          grep -q 'SUPABASE_URL: ""' _site/js/config.js && echo "::notice::No SUPABASE_URL set — site deploys in PREVIEW (demo) mode" || true
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

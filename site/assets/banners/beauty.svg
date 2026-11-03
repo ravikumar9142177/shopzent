@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Beauty">
+<defs><linearGradient id="bbeauty" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DB2777"/><stop offset="1" stop-color="#A855F7"/></linearGradient>
+<radialGradient id="gbeauty" cx=".8" cy=".2" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+<rect width="1200" height="500" fill="url(#bbeauty)"/><rect width="1200" height="500" fill="url(#gbeauty)"/>
+<circle cx="1020" cy="90" r="160" fill="#fff" fill-opacity=".08"/><circle cx="1100" cy="430" r="120" fill="#fff" fill-opacity=".07"/><circle cx="120" cy="470" r="90" fill="#fff" fill-opacity=".06"/>
+<g transform="translate(830 130)" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity=".95"><rect x="80" y="90" width="80" height="150" rx="14"/><path d="M95 90V40h50v50M105 40V10h30v30"/><path d="M200 120c25 0 40 20 40 45s-15 45-40 45"/></g>
+<text x="70" y="235" font-family="Poppins,Segoe UI,Arial,sans-serif" font-weight="800" font-size="72" fill="#fff">Beauty</text>
+<text x="72" y="295" font-family="Poppins,Segoe UI,Arial,sans-serif" font-weight="500" font-size="30" fill="#fff" fill-opacity=".9">Skincare, makeup & grooming</text>
+<rect x="72" y="330" width="210" height="58" rx="29" fill="#fff"/><text x="177" y="368" text-anchor="middle" font-family="Poppins,Segoe UI,Arial,sans-serif" font-weight="700" font-size="22" fill="#DB2777">Explore →</text></svg>
