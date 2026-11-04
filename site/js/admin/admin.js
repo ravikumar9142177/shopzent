@@ -8,7 +8,7 @@ const MOD = document.body.dataset.module;
 const NAV = [['Overview', [['dashboard', '📊', 'Dashboard'], ['orders', '📦', 'Orders'], ['payments', '💳', 'Payment verification'], ['returns', '↩️', 'Returns & refunds']]],
   ['Catalogue', [['products', '🛍️', 'Products'], ['content', '🗂️', 'Categories & brands'], ['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
   ['Money & promos', [['coupons', '🎟️', 'Coupons'], ['wallet', '👛', 'Customer wallets'], ['coins', '🪙', 'Coins']]],
-  ['Site & people', [['settings', '⚙️', 'Website settings'], ['domain', '🌐', 'Domain'], ['users', '👥', 'Users'], ['messages', '✉️', 'Messages'], ['security', '🛡️', 'Security & audit'], ['alerts', '🚨', 'Hacker alerts']]]];
+  ['Site & people', [['settings', '⚙️', 'Website settings'], ['domain', '🌐', 'Domain'], ['users', '👥', 'Users'], ['emailcheck', '📧', 'Email check'], ['messages', '✉️', 'Messages'], ['security', '🛡️', 'Security & audit'], ['alerts', '🚨', 'Hacker alerts']]]];
 let ME = null, FACTOR = null;
 const DEMO_ADMIN_EMAIL = String(window.SHOPZENT_CONFIG?.DEMO_ADMIN?.email || '').trim().toLowerCase(); // preview mode: the only admin email accepted
 const main = () => $('#adm-main');
@@ -565,6 +565,67 @@ M.alerts = async () => {
   $('#al-ackall').onclick = async () => { if (!await confirmBox('Acknowledge all new alerts?', 'They stay in the list (marked acknowledged). Use this after you have looked through them.', { ok: 'Acknowledge all' })) return; try { const n = await call('admin_acknowledge_all_alerts', {}); ok(`${n} alerts acknowledged`); load(); } catch (x) { bad(x); } };
   [['f-sev', 'severity'], ['f-st', 'status'], ['f-from', 'from'], ['f-to', 'to'], ['f-ip', 'ip']].forEach(([id, k]) => $('#' + id).addEventListener('change', (e) => { F[k] = e.target.value; load(); }));
   await load();
+};
+
+
+// ----- email check (migration 0020 + the email-check function) -----
+// The DATABASE decides who may read or change anything here (admin + 2FA). The MX lookup runs in the email-check function.
+const EC_TAG = { disposable: ['red', '🚫 DISPOSABLE — temp / fake email'], suspicious: ['pink', '⚠️ SUSPICIOUS — shak wala (guess)'], ok: ['green', '✅ LOOKS OK — theek lag raha hai'], unknown: ['', '❔ COULD NOT CHECK — pakka nahi'], bad: ['red', '❌ Sahi email/domain nahi hai'] };
+const ec_random = (dom) => { const lab = String(dom || '').split('.')[0]; return /\d{4,}/.test(lab) || (lab.length >= 8 && !/[aeiou]/.test(lab)); };
+const ec_mx = async (domains) => { const out = {}; const list = [...new Set(domains.filter(Boolean))]; for (let i = 0; i < list.length; i += 20) { try { const res = await api.fn('email-check', { domains: list.slice(i, i + 20) }); (res.results || []).forEach((x) => { out[x.domain] = x; }); } catch { /* not checked: shown as could-not-check */ } } return out; };
+function ec_verdict(r, mx) {
+  if (!r.valid) return { kind: 'bad', why: ['Example: abc@gmail.com ya sirf domain jaise mailinator.com'] };
+  if (r.major) return { kind: 'ok', why: [`${r.domain} bada provider hai — yahan temp email nahi hota`] };
+  if (r.blocked) return { kind: 'disposable', why: [`${r.domain} already aapki “Blocked email domains” list me hai`] };
+  if (r.on_list) return { kind: 'disposable', why: [`${r.domain} temp / disposable email domains ki list me hai`] };
+  if (!mx || mx.mx === 'could_not_check') return { kind: 'unknown', why: ['Mail server (MX) abhi check nahi ho paya, aur domain list me bhi nahi hai. Pakka nahi keh sakte — dobara try karo'] };
+  if (mx.mx === 'no_mx') return { kind: 'suspicious', why: [`${r.domain} par koi mail server (MX) nahi hai — shayad fake ya throwaway domain. Ye ek guess hai`] };
+  if (ec_random(r.domain)) return { kind: 'suspicious', why: [`${r.domain} ka naam random lag raha hai — ye bhi ek guess hai`] };
+  return { kind: 'ok', why: ['Mail server hai aur domain kisi temp list me nahi hai. Guarantee nahi, sirf ek achha sanket'] };
+}
+const ec_custTxt = (c) => c ? `${esc(c.full_name || 'Naam nahi')} · ID ${esc(c.customer_id || '')} · ${num(c.orders)} orders · joined ${esc(fmtDate(c.created_at))} · ${c.status === 'active' ? 'active' : '<b style="color:var(--bad)">' + esc(c.status) + '</b>'}` : 'Is email se koi registered customer nahi';
+async function ec_block(t, mode) {
+  // t = { domain, customer_id(uuid), email }, mode = 'dom' | 'user' | 'both'
+  const what = mode === 'both' ? `Domain “${t.domain}” aur customer ${t.email} dono block honge` : mode === 'dom' ? `Domain “${t.domain}” block hoga — is domain se naya signup aur order nahi hoga` : `Customer ${t.email} block hoga — wo login nahi kar payega`;
+  if (!await confirmBox('Block karein?', `${what}. Ye audit log me jayega. Customers ko koi notice nahi jayega.`, { ok: 'Haan, block karo', danger: true })) return false;
+  await call('admin_block_email_target', { p_domain: t.domain, p_user_id: mode !== 'dom' ? t.customer_id : null, p_reason: 'blocked from Email check', p_block_domain: mode !== 'user', p_block_user: mode !== 'dom' });
+  ok('Blocked ✓'); return true;
+}
+M.emailcheck = async () => {
+  main().innerHTML = head('Email check') + `<div class="alert small">Email ya domain daalo, turant pata chal jayega temp/fake hai ya nahi. <b>Ye guess hai, pakka nahi</b>: koi bhi checker 100% sahi nahi hota.</div>
+  <div class="card pad" style="margin-bottom:14px"><div class="row" style="gap:8px;flex-wrap:wrap"><input id="ec-in" type="text" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="abc@xyz.com ya xyz.com" style="flex:1;min-width:180px;max-width:520px"><button class="btn" id="ec-go">Check karo</button></div><div id="ec-out" style="margin-top:12px"></div></div>
+  <div class="card pad"><div class="row between" style="flex-wrap:wrap;gap:8px"><h3 style="margin:0">Check all signups</h3><label class="small row" style="gap:6px"><input type="checkbox" id="ec-all"> Sab dikhao</label></div><p class="tiny muted">Recent customers. Temp list wale aur mail server na wale pehle dikhte hain (mail server wala flag ek guess hai).</p><div id="ec-list"><div class="sk" style="height:120px"></div></div></div>`;
+  const runCheck = async () => {
+    const v = $('#ec-in').value.trim().toLowerCase(); const out = $('#ec-out'); if (!v) return;
+    out.innerHTML = '<div class="sk" style="height:90px"></div>';
+    try {
+      const r = await api.rpc('admin_email_check_db', { p_input: v });
+      const mx = r.valid && !r.major ? (await ec_mx([r.domain]))[r.domain] || null : null;
+      const V = ec_verdict(r, mx); const [cls, label] = EC_TAG[V.kind];
+      const mxTxt = r.major ? '— (bada provider)' : !mx || mx.mx === 'could_not_check' ? '⚠️ check nahi ho paya' : mx.mx === 'has_mx' ? '✅ haan' + (mx.mx_hosts ? ' (' + esc(mx.mx_hosts[0]) + ')' : '') : '❌ nahi';
+      const t = r.valid ? { domain: r.domain, customer_id: r.customer?.id, email: r.customer?.email || r.email || r.domain } : null;
+      const canDom = t && !r.major && !r.blocked; const canUser = t && r.customer && r.customer.status === 'active';
+      out.innerHTML = `<div><span class="tag ${cls}" style="font-size:15px;padding:6px 10px">${label}</span></div>${V.why.map((w) => `<p class="small" style="margin:8px 0 0">${esc(w)}</p>`).join('')}
+      ${r.valid ? `<div class="small" style="margin-top:10px;line-height:1.8"><div><b>Domain:</b> ${esc(r.domain)}</div><div><b>Mail server (MX):</b> ${mxTxt}</div><div><b>Temp list me:</b> ${r.on_list ? '✅ haan' : '❌ nahi'} <span class="tiny muted">(list me ${num(r.list_size)} domains)</span></div><div><b>Domain already blocked:</b> ${r.blocked ? '🚫 haan' : 'nahi'}</div><div><b>Is domain ke customers:</b> ${num(r.customers_on_domain)}</div>${r.email ? `<div><b>Customer:</b> ${ec_custTxt(r.customer)}</div>` : ''}</div>` : ''}
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px">${canDom ? '<button class="btn danger sm" data-b="dom">🚫 Yeh domain block karo</button>' : ''}${canUser ? '<button class="btn danger sm" data-b="user">👤 Yeh customer block karo</button>' : ''}${canDom && canUser ? '<button class="btn danger sm" data-b="both">Dono block karo</button>' : ''}</div>`;
+      out.querySelectorAll('[data-b]').forEach((b) => b.onclick = async () => { try { if (await ec_block(t, b.dataset.b)) runCheck(); } catch (x) { bad(x); } });
+    } catch (x) { out.innerHTML = `<div class="alert bad">${esc(errText(x))}</div>`; }
+  };
+  $('#ec-go').onclick = runCheck; $('#ec-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') runCheck(); });
+  const loadList = async () => {
+    const rows = await api.rpc('admin_recent_signups', { p_limit: 150 });
+    const mxMap = await ec_mx(rows.filter((x) => x.domain && !x.major).map((x) => x.domain));
+    const items = rows.map((x) => { const mx = mxMap[x.domain] || null; const V = ec_verdict({ valid: true, domain: x.domain, major: x.major, on_list: x.on_list, blocked: x.blocked_domain }, mx); return { x, V }; });
+    const show = $('#ec-all').checked ? items : items.filter((i) => i.V.kind !== 'ok');
+    $('#ec-list').innerHTML = `<p class="tiny muted">${num(items.filter((i) => i.V.kind !== 'ok').length)} of ${num(items.length)} flagged</p>` + (show.map((i, n) => { const [cls, label] = EC_TAG[i.V.kind]; const r = i.x;
+      return `<div class="row between" style="padding:10px 0;border-bottom:1px solid var(--line);gap:8px;flex-wrap:wrap"><div style="min-width:0;flex:1"><span class="tag ${cls}" style="font-size:11px">${esc(label.replace(/^\S+ /, ''))}</span><div style="margin-top:4px;word-break:break-all"><b>${esc(r.email)}</b></div><div class="tiny muted">${esc(r.full_name || 'Naam nahi')} · ${num(r.orders)} orders · ${esc(fmtDate(r.created_at))}${r.status !== 'active' ? ' · <b style="color:var(--bad)">' + esc(r.status) + '</b>' : ''}</div></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${r.major ? '' : (r.blocked_domain ? '<span class="tiny muted">domain blocked</span>' : `<button class="btn sec sm" data-d="${n}">Domain block</button>`)}${r.status === 'active' ? `<button class="btn sec sm" data-u="${n}">Customer block</button>` : ''}</div></div>`; }).join('') || '<div class="muted small">Koi flagged signup nahi mila 👍</div>');
+    const tgt = (n) => { const r = show[n].x; return { domain: r.domain, customer_id: r.id, email: r.email }; };
+    $('#ec-list').querySelectorAll('[data-d]').forEach((b) => b.onclick = async () => { try { if (await ec_block({ ...tgt(+b.dataset.d) }, 'dom')) loadList(); } catch (x) { bad(x); } });
+    $('#ec-list').querySelectorAll('[data-u]').forEach((b) => b.onclick = async () => { try { if (await ec_block(tgt(+b.dataset.u), 'user')) loadList(); } catch (x) { bad(x); } });
+  };
+  $('#ec-all').onchange = loadList;
+  await loadList().catch((x) => { $('#ec-list').innerHTML = `<div class="alert bad">${esc(errText(x))}</div>`; });
 };
 
 // ---------- boot ----------
