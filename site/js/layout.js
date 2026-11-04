@@ -51,15 +51,17 @@ function updateBadges() { const n = cart.count(); $$('[data-cart-count]').forEac
 export function productCard(p, wish = new Set()) {
   const img = media((p.images || [])[0]) || href('assets/img/placeholder.svg');
   const flags = [p.is_deal ? '<span class="tag orange">Deal</span>' : '', p.is_trending ? '<span class="tag pink">Trending</span>' : '', p.availability === 'out_of_stock' ? '<span class="tag gray">Out of stock</span>' : ''].join('');
-  const priceHtml = p.purchase_type === 'affiliate' && p.price == null ? `<div class="price"><span class="small muted">See price on ${esc(mktName(p.marketplace))}</span></div>`
+  const aff = p.purchase_type === 'affiliate', hasLink = !aff || !!p.affiliate_url, noPrice = p.price == null || p.price === '';
+  const priceHtml = noPrice ? `<div class="price"><span class="small muted">${aff && hasLink ? 'See price on ' + esc(mktName(p.marketplace)) : 'See price'}</span></div>`
     : `<div class="price"><b>${inr(p.price)}</b>${p.original_price && p.original_price > p.price ? `<s>${inr(p.original_price)}</s><span class="off">${Math.round((p.original_price - p.price) / p.original_price * 100)}% off</span>` : ''}</div>`;
+  const purl = href('product.html?slug=' + encodeURIComponent(p.slug));
   const on = wish.has(p.id);
   return `<article class="pcard"><a class="img" href="${href('product.html?slug=' + encodeURIComponent(p.slug))}" aria-label="${esc(p.name)}"><img loading="lazy" decoding="async" src="${esc(img)}" alt="${esc(p.name)}" width="400" height="400">${p.is_sample ? '<span class="sample-ribbon">SAMPLE LISTING</span>' : ''}</a>
     <div class="flags">${flags}</div><button class="wish ${on ? 'on' : ''}" data-wish="${esc(p.id)}" aria-label="Save to wishlist" aria-pressed="${on}">${on ? IC.heartF : IC.heart}</button>
     <div class="body"><div class="row between"><span class="brand">${esc(p._brand || '')}</span><span class="mkt ${esc(p.marketplace)}">${esc(mktName(p.marketplace))}</span></div>
     <h3><a href="${href('product.html?slug=' + encodeURIComponent(p.slug))}">${esc(p.name)}</a></h3>${priceHtml}
     ${p.purchase_type === 'affiliate' && p.price != null && p.price_verified_at ? `<span class="tiny muted">Price checked ${new Date(p.price_verified_at).toLocaleDateString('en-IN')}</span>` : ''}
-    <div class="foot">${p.purchase_type === 'affiliate' ? `<button class="btn sm block" data-aff="${esc(p.id)}">Buy on ${esc(mktName(p.marketplace))} ${IC.ext}</button>` : p.availability === 'out_of_stock' ? '<button class="btn sm sec block" disabled>Out of stock</button>' : `<button class="btn sm block" data-add="${esc(p.id)}">Add to cart</button>`}</div></div></article>`;
+    <div class="foot">${aff ? (hasLink ? `<button class="btn sm block" data-aff="${esc(p.id)}">Buy on ${esc(mktName(p.marketplace))} ${IC.ext}</button>` : `<a class="btn sm sec block" href="${purl}">View details</a>`) : p.availability === 'out_of_stock' ? '<button class="btn sm sec block" disabled>Out of stock</button>' : noPrice ? `<a class="btn sm sec block" href="${purl}">View details</a>` : `<button class="btn sm block" data-add="${esc(p.id)}">Add to cart</button>`}</div></div></article>`;
 }
 export const mktName = (m) => ({ amazon: 'Amazon', flipkart: 'Flipkart', shopzent: 'SHOPZENT', other: 'Partner store' }[m] || 'Partner store');
 export function skeletonCards(n = 4) { return Array.from({ length: n }, () => '<div class="sk-card"><div class="sk sk-img"></div><div class="sk sk-l"></div><div class="sk sk-l" style="width:60%"></div></div>').join(''); }

@@ -3,7 +3,7 @@
 import { uuid } from './util.js';
 export function createSupabaseApi(cfg) {
   const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' } });
-  const fail = (error) => { if (error) { const e = new Error(error.message || error.error_description || 'error'); e.code_text = error.code === '23503' ? '23503' : error.message; e.details = error.details; throw e; } };
+  const fail = (error) => { if (error) { const e = new Error(error.message || error.error_description || 'error'); e.code_text = error.code === '23503' ? '23503' : error.message; e.code = error.code || ''; e.details = error.details; throw e; } };
   const applyQ = (q, o = {}) => {
     Object.entries(o.eq || {}).forEach(([k, v]) => { q = q.eq(k, v); });
     Object.entries(o.neq || {}).forEach(([k, v]) => { q = q.neq(k, v); });
