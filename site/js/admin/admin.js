@@ -517,7 +517,7 @@ M.alerts = async () => {
   const F = { severity: '', status: '', from: '', to: '', ip: '' };
   main().innerHTML = head('Hacker alerts', '<button class="btn sec sm" id="al-blocked">🚫 Blocked IPs</button><button class="btn sec sm" id="al-ackall">✔ Acknowledge all</button>') + `
   <div class="kpis" id="al-kpi"></div>
-  <div class="card pad" style="margin-bottom:12px"><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">
+  <div class="card pad" id="al-filters" style="margin-bottom:12px"><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px"><style>#al-filters input,#al-filters select{min-width:0;width:100%;box-sizing:border-box}</style>
     <div class="field" style="margin:0"><label for="f-sev">Severity</label><select id="f-sev"><option value="">All</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
     <div class="field" style="margin:0"><label for="f-st">Status</label><select id="f-st"><option value="">All</option><option value="new">New</option><option value="acknowledged">Acknowledged</option><option value="handled">Handled</option></select></div>
     <div class="field" style="margin:0"><label for="f-from">From date</label><input id="f-from" type="date"></div>
