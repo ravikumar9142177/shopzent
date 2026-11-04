@@ -45,10 +45,12 @@ export function createSupabaseApi(cfg) {
         const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name, mobile }, emailRedirectTo: redirect } });
         if (error && /disposable|temporary/i.test(error.message || '')) throw new Error('disposable_email');
         if (error && /rate|too many|security purposes/i.test(error.message || '')) throw new Error('rate_limited');
+        if (error && /sending|smtp/i.test(error.message || '')) throw new Error('email_send_failed');
         fail(error); return { needsConfirm: !data.session }; },
       async resendConfirm(email) { const redirect = (cfg.SITE_URL || location.origin + location.pathname.replace(/[^/]*$/, '')).replace(/\/?$/, '/') + 'login.html?confirmed=1';
         const { error } = await sb.auth.resend({ type: 'signup', email, options: { emailRedirectTo: redirect } });
         if (error && /rate|too many|security purposes|seconds/i.test(error.message || '')) throw new Error('resend_wait');
+        if (error && /sending|smtp|mail/i.test(error.message || '')) throw new Error('email_send_failed');
         fail(error); return true; },
       async signIn(email, password, captchaToken) {
         if (cfg.USE_LOGIN_GUARD) {
