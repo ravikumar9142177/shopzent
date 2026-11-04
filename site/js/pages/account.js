@@ -147,6 +147,12 @@ export async function cartPage() {
 export async function checkout() {
   const p = await requireLogin(); const s = await settings(); const items = cart.get();
   if (!items.length) { main().innerHTML = `<div class="container empty"><img src="assets/img/empty.svg" alt=""><h2>Your cart is empty</h2><a class="btn" href="products.html">Shop now</a></div>`; return; }
+  const rules = s.order_rules || {};
+  if (rules.require_phone !== false) { const me = (await api.select('profiles', { eq: { id: p.id }, single: true }).catch(() => null)) || {};
+    if (!me.phone || (rules.require_phone_verified && !me.phone_verified_at)) {
+      main().innerHTML = `<div class="container" style="max-width:520px;padding:24px 16px"><div class="card pad" id="phonegate"><h2 style="margin-top:0">📱 Phone verify karo</h2><p class="small">Order karne ke liye apna Indian mobile number add karein (10 digits, 6–9 se shuru). Ek number sirf ek account par chalega.</p><form id="phf"><div class="field"><label for="ph">Mobile number</label><input id="ph" inputmode="numeric" maxlength="14" placeholder="98XXXXXXXX" value="${esc(me.mobile || '')}" required></div><p class="err" id="phe"></p><button class="btn block">Save &amp; continue</button></form>${rules.require_phone_verified ? '<p class="tiny muted">OTP verification is required for this number.</p>' : ''}</div></div>`;
+      $('#phf').onsubmit = async (e) => { e.preventDefault(); $('#phe').textContent = ''; try { await api.rpc('update_my_profile', { p_full_name: (me.full_name || p.full_name || 'Customer').slice(0, 100), p_mobile: $('#ph').value.trim() }); location.reload(); } catch (x) { $('#phe').textContent = errText(x); } };
+      return; } }
   const w = await api.rpc('my_wallet').catch(() => ({ available: 0 })); const last = JSON.parse(localStorage.getItem('sz_ship') || '{}');
   main().innerHTML = `<div class="phead"><div class="container"><div class="crumbs"><a href="cart.html">Cart</a> / Checkout</div><h1>Checkout</h1></div></div>
   <div class="container"><div class="steps"><span class="on">1 · Address</span><span class="on">2 · Coupon</span><span>3 · Pay by UPI</span><span>4 · Submit UTR</span></div></div>
@@ -278,7 +284,7 @@ ${(() => { const ls = subs[0]; if (!ls) return ''; const wa = waLink(s.contact?.
   if (['payment_pending', 'payment_submitted', 'payment_rejected', 'payment_verified', 'order_confirmed', 'processing'].includes(o.status) && !rets.some((r) => r.kind === 'cancellation' && !['return_rejected'].includes(r.status))) oa.insertAdjacentHTML('beforeend', '<button class="btn sec sm" id="cx">Cancel order</button>');
   if (o.status === 'delivered') oa.insertAdjacentHTML('beforeend', `<a class="btn sec sm" href="returns.html?order=${esc(o.id)}">Request return</a>`);
   oa.insertAdjacentHTML('beforeend', `<a class="btn ghost sm" target="_blank" rel="noopener" href="${waLink(s.contact.whatsapp, `Hi SHOPZENT, about my order ${o.order_code} (Customer ID ${p.customer_id}).`)}">WhatsApp support</a>`);
-  $('#cx')?.addEventListener('click', async () => { const reason = await confirmBox('Cancel this order?', o.payment_status === 'verified' ? 'Your payment is already verified, so this sends a cancellation request to our team. Any eligible refund follows our refund policy.' : 'This order has not been paid/verified yet, so it will be cancelled right away.', { ok: 'Cancel order', danger: true, input: 'Reason' }); if (!reason) return;
+  $('#cx')?.addEventListener('click', async () => { const reason = await confirmBox('Cancel this order?', o.payment_status === 'verified' ? `Your payment is already verified, so this sends a cancellation request to our team. Any eligible refund follows our refund policy. ⚠️ Note: after ${s.order_rules?.cancel_penalty_after ?? 5} cancellations in one day, each further cancelled paid order costs ₹${s.order_rules?.cancel_penalty_amount ?? 10} from your wallet.` : 'This order has not been paid/verified yet, so it will be cancelled right away.', { ok: 'Cancel order', danger: true, input: 'Reason' }); if (!reason) return;
     try { const r = await api.rpc('request_cancellation', { p_order_id: o.id, p_reason: reason }); toast(r.cancelled ? 'Order cancelled' : 'Cancellation request sent to our team', 'ok'); setTimeout(() => location.reload(), 700); } catch (x) { toast(errText(x), 'bad'); } });
 }
 
