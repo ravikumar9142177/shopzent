@@ -2,3 +2,4 @@ owner-assets/
 node_modules/
 *.zip
 .env
+supabase/.temp/
