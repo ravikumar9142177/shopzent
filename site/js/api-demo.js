@@ -380,6 +380,7 @@ export function createDemoApi() {
     async mfaState() { const s = sess(); const u = s && db.users.find((x) => x.id === s.uid); const has = !!(u && u.factors.some((f) => f.status === 'verified')); return { current: s?.aal || null, next: has ? 'aal2' : 'aal1', mfaRequired: has && s?.aal !== 'aal2' }; },
     async signOut(all) { if (uid()) { audit(all ? 'logout_all' : 'logout', 'auth', uid()); save(); } setSess(null); emit('SIGNED_OUT'); },
     async sendReset() { await pause(300); return true; },
+    async resendConfirm() { await pause(300); return true; },
     async updatePassword(pw) { const u = db.users.find((x) => x.id === uid()); if (!u) throw err('not_authorized'); if (u.pbkdf2) throw err('Preview mode: the admin password is set through the hash in js/config.js (see SETUP.md). With Supabase connected you change it normally.'); u.pw = await sha('sz:' + pw); audit('password_changed', 'auth', u.id); save(); return true; },
     async factors() { const u = db.users.find((x) => x.id === uid()); return clone(u?.factors || []); },
     async enroll() { const u = db.users.find((x) => x.id === uid()); if (!u) throw err('not_authorized'); u.factors = u.factors.filter((f) => f.status === 'verified'); const f = { id: uuid(), status: 'unverified', name: 'Authenticator' }; u.factors.push(f); save();

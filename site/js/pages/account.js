@@ -9,6 +9,11 @@ const pwOk = (pw) => pw.length >= 10 && /[a-zA-Z]/.test(pw) && /\d/.test(pw);
 const demoNote = (html) => DEMO ? `<div class="alert warn small">${html}</div>` : '';
 
 // ---------- auth ----------
+// one-tap "resend verification email" box (login page, register success, checkout gate)
+const verifyBox = (email, lead) => `<div class="alert" id="vbox"><b>📧 Email verify karo</b><div class="small" style="margin:6px 0 10px">${lead || 'Order karne se pehle bas ek baar email verify karna hai.'} <b>${esc(email || '')}</b> pe bheja gaya link kholo (Inbox ya Spam folder dekho).</div><button type="button" class="btn sm" id="vres">Verify link dobara bhejo</button> <span class="small" id="vmsg" aria-live="polite"></span></div>`;
+const bindVerify = (email) => { const b = $('#vres'); if (!b) return; b.onclick = async () => { b.disabled = true; $('#vmsg').textContent = 'Bhej rahe hain…';
+  try { await api.auth.resendConfirm(email); $('#vmsg').textContent = '✓ Link bhej diya. Inbox / Spam check karo.'; setTimeout(() => { b.disabled = false; }, 60000); }
+  catch (x) { $('#vmsg').textContent = errText(x); setTimeout(() => { b.disabled = false; }, 15000); } }; };
 export async function login() {
   const p = await profile(); if (p && !param('mfa')) { location.replace(safeNext(param('next'))); return; }
   main().innerHTML = `<div class="auth-wrap"><div class="auth-card"><div class="logo-c"><img src="assets/logo-lockup.png" alt="SHOPZENT"></div><h1 class="center" style="font-size:1.4rem">Welcome back</h1>
@@ -16,7 +21,7 @@ export async function login() {
   ${param('next') ? `<div class="alert small">🛒 Please log in to continue. <b>New to SHOPZENT? <a href="register.html?next=${encodeURIComponent(safeNext(param('next')))}">Register here</a></b> — it takes a minute, then you come straight back to your cart.</div>` : ''}
   <form id="lf" novalidate><div class="field"><label for="em">Email</label><input id="em" type="email" autocomplete="username" required maxlength="120"></div>
   <div class="field"><label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password" required maxlength="128"></div>
-  <div id="captcha"></div><p class="err" id="le" role="alert"></p><div id="adm-hint" class="alert small" hidden>🔐 This is the admin account. <b>Admin? <a href="admin/index.html" id="adm-link">Login here →</a></b></div><button class="btn block" id="lb">Log in</button></form>
+  <div id="captcha"></div><p class="err" id="le" role="alert"></p><div id="vwrap"></div><div id="adm-hint" class="alert small" hidden>🔐 This is the admin account. <b>Admin? <a href="admin/index.html" id="adm-link">Login here →</a></b></div><button class="btn block" id="lb">Log in</button></form>
   <form id="mf" hidden novalidate><div class="alert">🔐 Enter the 6-digit code from your authenticator app.</div>${demoNote('Demo mode: enter any 6 digits.')}<div class="field"><label for="otp">Authenticator code</label><input id="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\\d{6}" required></div>
   <p class="err" id="me" role="alert"></p><button class="btn block">Verify</button><p class="small center" style="margin-top:10px"><a href="#" id="use-rc">Lost your phone? Use a recovery code</a></p></form>
   <p class="small center" style="margin-top:14px"><a href="forgot-password.html">Forgot password?</a> · New here? <a href="register.html${param('next') ? '?next=' + encodeURIComponent(safeNext(param('next'))) : ''}">Create account</a></p></div></div>`;
@@ -34,7 +39,8 @@ export async function login() {
       try { await api.auth.signIn(em, pw); resetProfile(); location.href = 'admin/index.html'; return; }
       catch (er) { admHint(); $('#le').textContent = er.message === 'rate_limited' ? 'Too many attempts. Please wait a minute and try again.' : errText(er); $('#lb').disabled = false; $('#lb').textContent = 'Log in'; return; } }
     try { const st = await api.auth.signIn(em, pw); resetProfile(); if (st.mfaRequired) { await toMfa(); return; } await afterLogin(); }
-    catch (er) { $('#le').textContent = er.message === 'rate_limited' ? `Too many attempts. Please wait ${er.retry_after || 60} seconds and try again.` : errText(er); }
+    catch (er) { if (er.message === 'email_not_confirmed') { $('#le').textContent = ''; $('#vwrap').innerHTML = verifyBox(em, 'Aapka account ban gaya hai, bas email verify karna baaki hai.'); bindVerify(em); return; }
+      $('#le').textContent = er.message === 'rate_limited' ? `Too many attempts. Please wait ${er.retry_after || 60} seconds and try again.` : errText(er); }
     finally { $('#lb').disabled = false; $('#lb').textContent = 'Log in'; } });
   $('#mf').addEventListener('submit', async (e) => { e.preventDefault(); $('#me').textContent = ''; try { await api.auth.verify(factorId, $('#otp').value.trim()); resetProfile(); await afterLogin(); } catch (er) { $('#me').textContent = er.message; $('#otp').select(); } });
   $('#use-rc').onclick = async (e) => { e.preventDefault(); const code = prompt('Enter one of your recovery codes (e.g. ABCDE-FGHJK):'); if (!code) return;
@@ -57,7 +63,7 @@ export async function register() {
     const er = !d.full_name ? 'Please enter your name.' : !/^\S+@\S+\.\S+$/.test(d.email) ? 'Please enter a valid email.' : !/^[6-9]\d{9}$/.test(d.mobile) ? 'Please enter a valid 10-digit Indian mobile number.' : !pwOk(d.password) ? 'Password must be at least 10 characters with letters and numbers.' : d.password !== $('#pw2').value ? 'Passwords do not match.' : !$('#agree').checked ? 'Please accept the Terms and Privacy Policy.' : '';
     if (er) { $('#re').textContent = er; return; } $('#rb').disabled = true;
     const lg = 'login.html' + (param('next') ? '?next=' + encodeURIComponent(safeNext(param('next'))) : '');
-    try { const r = await api.auth.signUp(d); $('#rf').outerHTML = r.demoAutoConfirmed ? `<div class="alert ok">Account created (preview). You can log in now.</div><a class="btn block" href="${lg}">Log in</a>` : `<div class="alert ok">Almost done! If this email is new, we've sent a confirmation link to <b>${esc(d.email)}</b>. Open it to activate your account, then log in.</div><a class="btn block" href="${lg}">Go to login</a>`; }
+    try { const r = await api.auth.signUp(d); $('#rf').outerHTML = r.demoAutoConfirmed ? `<div class="alert ok">Account created (preview). You can log in now.</div><a class="btn block" href="${lg}">Log in</a>` : `<div class="alert ok">Account ban gaya! 🎉 Bas ek step: <b>${esc(d.email)}</b> pe humne verify link bheja hai. Link kholo, phir login karo. <span class="small">(Account created: open the link we emailed you, then log in.)</span></div><p class="small muted">Email nahi aaya? Spam folder dekho, ya: <button type="button" class="btn xs sec" id="vres">Link dobara bhejo</button> <span id="vmsg" class="small" aria-live="polite"></span></p><a class="btn block" href="${lg}">Login pe jao</a>`; if (!r.demoAutoConfirmed) bindVerify(d.email); }
     catch (x) { $('#re').textContent = errText(x); $('#rb').disabled = false; } });
 }
 export async function forgot() {
@@ -148,16 +154,25 @@ export async function checkout() {
   const p = await requireLogin(); const s = await settings(); const items = cart.get();
   if (!items.length) { main().innerHTML = `<div class="container empty"><img src="assets/img/empty.svg" alt=""><h2>Your cart is empty</h2><a class="btn" href="products.html">Shop now</a></div>`; return; }
   const rules = s.order_rules || {};
+  const el = await api.rpc('my_order_eligibility').catch(() => null);
+  if (el && (!el.email_confirmed || el.blocked || el.disposable_email || el.minutes_to_wait > 0)) {
+    const msg = el.blocked ? `<h2 style="margin-top:0">🙏 Order abhi nahi ho sakta</h2><p class="small">${esc(errText('account_suspended'))}</p>${s.contact?.whatsapp ? `<a class="btn block" href="${waLink(s.contact.whatsapp, 'Hi SHOPZENT, mujhe order karne me madad chahiye.')}" target="_blank" rel="noopener">WhatsApp pe baat karein</a>` : ''}`
+      : el.disposable_email ? `<h2 style="margin-top:0">📧 Asli email chahiye</h2><p class="small">${esc(errText('disposable_email'))}</p>`
+      : !el.email_confirmed ? verifyBox(el.email) + '<button class="btn block sec" id="vdone" style="margin-top:10px">Maine verify kar liya ✓</button>'
+      : `<h2 style="margin-top:0">⏳ Thoda sa ruko</h2><p class="small">Naya account hai, ${el.minutes_to_wait} min baad order kar paoge. Tab tak cart me items safe hain.</p>`;
+    main().innerHTML = `<div class="container" style="max-width:520px;padding:24px 16px"><div class="card pad" id="emailgate">${msg}</div></div>`;
+    bindVerify(el.email); $('#vdone')?.addEventListener('click', () => location.reload());
+    return; }
   if (rules.require_phone !== false) { const me = (await api.select('profiles', { eq: { id: p.id }, single: true }).catch(() => null)) || {};
     if (!me.phone || (rules.require_phone_verified && !me.phone_verified_at)) {
-      main().innerHTML = `<div class="container" style="max-width:520px;padding:24px 16px"><div class="card pad" id="phonegate"><h2 style="margin-top:0">📱 Phone verify karo</h2><p class="small">Order karne ke liye apna Indian mobile number add karein (10 digits, 6–9 se shuru). Ek number sirf ek account par chalega.</p><form id="phf"><div class="field"><label for="ph">Mobile number</label><input id="ph" inputmode="numeric" maxlength="14" placeholder="98XXXXXXXX" value="${esc(me.mobile || '')}" required></div><p class="err" id="phe"></p><button class="btn block">Save &amp; continue</button></form>${rules.require_phone_verified ? '<p class="tiny muted">OTP verification is required for this number.</p>' : ''}</div></div>`;
+      main().innerHTML = `<div class="container" style="max-width:520px;padding:24px 16px"><div class="card pad" id="phonegate"><h2 style="margin-top:0">📱 Mobile number</h2><p class="small">Delivery ke liye apna mobile number ek baar add kar do (10 digits). Ye profile me save ho jayega, agli baar nahi poochenge.</p><form id="phf"><div class="field"><label for="ph">Mobile number</label><input id="ph" inputmode="numeric" maxlength="14" placeholder="98XXXXXXXX" value="${esc(me.mobile || '')}" required></div><p class="err" id="phe"></p><button class="btn block">Save &amp; continue</button></form></div></div>`;
       $('#phf').onsubmit = async (e) => { e.preventDefault(); $('#phe').textContent = ''; try { await api.rpc('update_my_profile', { p_full_name: (me.full_name || p.full_name || 'Customer').slice(0, 100), p_mobile: $('#ph').value.trim() }); location.reload(); } catch (x) { $('#phe').textContent = errText(x); } };
       return; } }
   const w = await api.rpc('my_wallet').catch(() => ({ available: 0 })); const last = JSON.parse(localStorage.getItem('sz_ship') || '{}');
   main().innerHTML = `<div class="phead"><div class="container"><div class="crumbs"><a href="cart.html">Cart</a> / Checkout</div><h1>Checkout</h1></div></div>
   <div class="container"><div class="steps"><span class="on">1 · Address</span><span class="on">2 · Coupon</span><span>3 · Pay by UPI</span><span>4 · Submit UTR</span></div></div>
   <div class="container layout2" style="padding-top:0"><form class="card pad" id="sf" novalidate><h3>Delivery address</h3><div class="form-grid">
-    <div class="field"><label for="s-name">Full name</label><input id="s-name" required maxlength="80" value="${esc(last.name || p.full_name || '')}" autocomplete="name"></div><div class="field"><label for="s-phone">Mobile</label><input id="s-phone" required inputmode="numeric" maxlength="10" value="${esc(last.phone || p.mobile || '')}" autocomplete="tel-national"></div>
+    <div class="field"><label for="s-name">Full name</label><input id="s-name" required maxlength="80" value="${esc(last.name || p.full_name || '')}" autocomplete="name"></div><div class="field"><label for="s-phone">Mobile</label><input id="s-phone" required inputmode="numeric" maxlength="10" value="${esc(last.phone || p.phone || p.mobile || '')}" autocomplete="tel-national"></div>
     <div class="field full"><label for="s-l1">House / street</label><input id="s-l1" required maxlength="150" value="${esc(last.line1 || '')}" autocomplete="address-line1"></div><div class="field full"><label for="s-l2">Area / landmark (optional)</label><input id="s-l2" maxlength="150" value="${esc(last.line2 || '')}" autocomplete="address-line2"></div>
     <div class="field"><label for="s-city">City</label><input id="s-city" required maxlength="60" value="${esc(last.city || '')}" autocomplete="address-level2"></div><div class="field"><label for="s-state">State</label><input id="s-state" required maxlength="60" value="${esc(last.state || '')}" autocomplete="address-level1"></div>
     <div class="field"><label for="s-pin">Pincode</label><input id="s-pin" required inputmode="numeric" maxlength="6" value="${esc(last.pincode || '')}" autocomplete="postal-code"></div><div class="field"><label for="s-note">Note (optional)</label><input id="s-note" maxlength="200"></div></div>

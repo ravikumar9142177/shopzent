@@ -5,6 +5,7 @@
 //  401 { error: "invalid_credentials" }            (generic, same for unknown email and wrong password)
 //  403 { error: "captcha_required" }               (after 3 failures in 15 min, only when CAPTCHA_SECRET is set)
 //  403 { error: "email_not_confirmed" }            (only reachable with the correct password)
+//  403 { error: "account_blocked" }                (admin blocked this account; GoTrue reports the ban)
 //  429 { error: "rate_limited", retry_after }      (10 failures / 60 s per email+IP -> cooldown 60 s, 2 min, 5 min, 15 min)
 //
 // Env (Supabase sets the first three automatically):
@@ -202,6 +203,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (errText.includes("email_not_confirmed") || errText.includes("email not confirmed")) {
     await recordAttempt(emailHash, ipHash, false, "email_not_confirmed");
     return json(req, 403, { error: "email_not_confirmed" });
+  }
+  if (errText.includes("user_banned") || errText.includes("banned")) {
+    await recordAttempt(emailHash, ipHash, false, "account_blocked");
+    return json(req, 403, { error: "account_blocked" });
   }
   if (gotrue.status >= 500) {
     return json(req, 503, { error: "temporarily_unavailable" });

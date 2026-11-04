@@ -42,7 +42,14 @@ export function createSupabaseApi(cfg) {
       async userId() { const s = await api.auth.session(); return s?.user?.id || null; },
       async profile() { const s = await api.auth.session(); if (!s) return null; try { return await api.rpc('my_profile'); } catch { return null; } },
       async signUp({ full_name, email, mobile, password }) { const redirect = (cfg.SITE_URL || location.origin + location.pathname.replace(/[^/]*$/, '')) .replace(/\/?$/, '/') + 'login.html?confirmed=1';
-        const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name, mobile }, emailRedirectTo: redirect } }); fail(error); return { needsConfirm: !data.session }; },
+        const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name, mobile }, emailRedirectTo: redirect } });
+        if (error && /disposable|temporary/i.test(error.message || '')) throw new Error('disposable_email');
+        if (error && /rate|too many|security purposes/i.test(error.message || '')) throw new Error('rate_limited');
+        fail(error); return { needsConfirm: !data.session }; },
+      async resendConfirm(email) { const redirect = (cfg.SITE_URL || location.origin + location.pathname.replace(/[^/]*$/, '')).replace(/\/?$/, '/') + 'login.html?confirmed=1';
+        const { error } = await sb.auth.resend({ type: 'signup', email, options: { emailRedirectTo: redirect } });
+        if (error && /rate|too many|security purposes|seconds/i.test(error.message || '')) throw new Error('resend_wait');
+        fail(error); return true; },
       async signIn(email, password, captchaToken) {
         if (cfg.USE_LOGIN_GUARD) {
           let res = null, guardMissing = false;
@@ -51,7 +58,7 @@ export function createSupabaseApi(cfg) {
           if (!guardMissing) { const { error } = await sb.auth.setSession({ access_token: res.access_token, refresh_token: res.refresh_token }); fail(error); return api.auth.mfaState(); }
         }
         const { error } = await sb.auth.signInWithPassword({ email, password, options: captchaToken ? { captchaToken } : undefined });
-        if (error) { throw new Error(/confirm/i.test(error.message) ? 'email_not_confirmed' : /rate/i.test(error.message) ? 'rate_limited' : 'invalid_credentials'); }
+        if (error) { throw new Error(/confirm/i.test(error.message) ? 'email_not_confirmed' : /banned/i.test(error.message) ? 'account_blocked' : /rate/i.test(error.message) ? 'rate_limited' : 'invalid_credentials'); }
         return api.auth.mfaState();
       },
       async mfaState() { const { data } = await sb.auth.mfa.getAuthenticatorAssuranceLevel(); return { current: data?.currentLevel, next: data?.nextLevel, mfaRequired: data?.nextLevel === 'aal2' && data?.currentLevel !== 'aal2' }; },
