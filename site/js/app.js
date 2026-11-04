@@ -17,15 +17,15 @@ function closedPage(st) {
   const root = document.body.dataset.root || '.';
   document.title = 'SHOPZENT — thodi der me wapas | Back soon';
   document.body.className = ''; document.body.removeAttribute('data-page');
-  document.body.innerHTML = `<main id="main" style="min-height:100vh;display:grid;place-items:center;padding:20px;background:#faf7ff"><div style="max-width:440px;width:100%;background:#fff;border-radius:24px;box-shadow:0 20px 50px rgba(124,58,237,.15);padding:28px 22px;text-align:center">
+  document.body.innerHTML = `<main id="main" style="min-height:100vh;display:grid;place-items:center;padding:20px;background:#0E0818"><div style="max-width:440px;width:100%;background:#1B1230;color:#fff;border-radius:24px;box-shadow:0 20px 50px rgba(124,58,237,.35);padding:28px 22px;text-align:center">
     <img src="${root}/assets/logo-lockup.png" alt="SHOPZENT" style="height:44px;margin-bottom:14px">
     <div style="font-size:3rem;line-height:1" aria-hidden="true">🛠️</div>
     <h1 style="font-size:1.35rem;margin:12px 0 6px">Website abhi thodi der ke liye band hai</h1>
     <p style="font-size:1.05rem;margin:0 0 14px"><b>Jaldi wapas aayenge 🙏</b></p>
-    <p style="color:#4b5563;margin:0 0 6px">SHOPZENT is temporarily closed for a short while.<br>We will be back very soon.</p>
-    ${st && st.message ? `<p style="background:#f5f3ff;border-radius:14px;padding:10px 12px;margin:14px 0;color:#4c1d95">${esc(st.message)}</p>` : ''}
+    <p style="color:#d1d5db;margin:0 0 6px">SHOPZENT is temporarily closed for a short while.<br>We will be back very soon.</p>
+    ${st && st.message ? `<p style="background:rgba(167,139,250,.18);border-radius:14px;padding:10px 12px;margin:14px 0;color:#ede9fe">${esc(st.message)}</p>` : ''}
     <a href="${waLink(wa, 'Hi SHOPZENT')}" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;height:50px;border-radius:999px;background:#16a34a;color:#fff;font-weight:600;text-decoration:none;margin-top:16px">💬 WhatsApp: +91 ${esc(wa)}</a>
-    <p style="margin:16px 0 0;font-size:.8rem"><a href="${root}/admin/index.html" style="color:#9ca3af">Admin</a></p></div></main>`;
+    <p style="margin:16px 0 0;font-size:.8rem"><a href="${root}/admin/index.html" style="color:#9ca3af;text-decoration:none">Admin</a></p></div></main>`;
 }
 (async () => {
   const page = document.body.dataset.page;
