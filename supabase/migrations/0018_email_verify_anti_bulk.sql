@@ -529,6 +529,7 @@ select cron.unschedule(jobid) from cron.job where jobname = 'shopzent-auto-cance
 select cron.schedule('shopzent-auto-cancel-unpaid', '*/5 * * * *', 'select public.auto_cancel_unpaid_orders()');
 
 -- ---------- block = suspend in the shop + ban at login + sign out everywhere ----------
+-- (banned_until is a real far-future date: GoTrue cannot read 'infinity')
 create or replace function public.admin_set_user_status(p_user_id uuid, p_status text, p_reason text)
 returns jsonb language plpgsql security definer set search_path = public, pg_temp as $function$
 declare
@@ -558,7 +559,7 @@ begin
   end if;
   update public.profiles set status = p_status where id = p_user_id returning * into v_p;
   if p_status = 'suspended' then
-    update auth.users set banned_until = 'infinity' where id = p_user_id;
+    update auth.users set banned_until = now() + interval '100 years' where id = p_user_id;
     delete from auth.sessions where user_id = p_user_id;          -- signs the user out on every device
   else
     update auth.users set banned_until = null where id = p_user_id;
