@@ -6,6 +6,7 @@
 //  403 { error: "captcha_required" }               (after 3 failures in 15 min, only when CAPTCHA_SECRET is set)
 //  403 { error: "email_not_confirmed" }            (only reachable with the correct password)
 //  403 { error: "account_blocked" }                (admin blocked this account; GoTrue reports the ban)
+//  403 { error: "ip_blocked" }                   (the admin blocked this IP in Hacker alerts)
 //  429 { error: "rate_limited", retry_after }      (10 failures / 60 s per email+IP -> cooldown 60 s, 2 min, 5 min, 15 min)
 //
 // Env (Supabase sets the first three automatically):
@@ -93,6 +94,17 @@ async function verifyCaptcha(token: string, ip: string): Promise<boolean> {
   }
 }
 
+// Security alerts for the admin's "Hacker alerts" page. Never throws and never delays a login by more than 2 s.
+async function rpc(name: string, args: Record<string, unknown>): Promise<unknown> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method: "POST", headers: serviceHeaders(), body: JSON.stringify(args), signal: AbortSignal.timeout(2000) });
+    return res.ok ? await res.json() : null;
+  } catch { return null; }
+}
+async function alertSec(req: Request, kind: string, severity: string, summary: string, details: Record<string, unknown>, ip: string, dedupe?: string): Promise<void> {
+  await rpc("service_log_security_alert", { p_kind: kind, p_severity: severity, p_target: "login", p_summary: summary, p_details: details, p_ip: ip, p_user_agent: (req.headers.get("user-agent") ?? "").slice(0, 300), p_dedupe: dedupe ?? null });
+}
+
 function lockState(attempts: Attempt[]): { lockedFor: number; lockoutsLastHour: number } {
   const now = Date.now();
   const lockouts = attempts.filter((a) => a.reason?.startsWith("lockout_"));
@@ -133,8 +145,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const ipHash = await sha256Hex(PEPPER + ip);
 
   let attempts: Attempt[];
+  let isAdminAccount = false;
   try {
-    attempts = await recentAttempts(emailHash, ipHash);
+    const [att, info] = await Promise.all([recentAttempts(emailHash, ipHash), rpc("service_login_info", { p_email: email, p_ip: ip })]);
+    attempts = att;
+    const i = (info ?? {}) as { blocked?: boolean; is_admin?: boolean };
+    isAdminAccount = i.is_admin === true;
+    if (i.blocked === true) return json(req, 403, { error: "ip_blocked" });
   } catch (e) {
     console.error("login-guard:", (e as Error).message);
     return json(req, 503, { error: "temporarily_unavailable" });
@@ -142,6 +159,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const { lockedFor, lockoutsLastHour } = lockState(attempts);
   if (lockedFor > 0) {
+    await alertSec(req, "login_locked_retry", isAdminAccount ? "medium" : "low", "Keeps trying to log in while locked out", { account: isAdminAccount ? "admin" : "customer", email_hash: emailHash.slice(0, 12) }, ip);
     return json(req, 429, { error: "rate_limited", retry_after: lockedFor }, { "Retry-After": String(lockedFor) });
   }
 
@@ -214,9 +232,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   await recordAttempt(emailHash, ipHash, false, "invalid_credentials");
   const failuresLastMinute = failures.filter((a) => Date.parse(a.created_at) > now - 60 * 1000).length + 1;
+  if (isAdminAccount) {
+    await alertSec(req, "admin_login_failed", failures15m + 1 >= 3 ? "high" : "low", "Wrong password on an ADMIN account", { account: "admin", failures_15m: failures15m + 1, email_hash: emailHash.slice(0, 12) }, ip);
+  } else if (failuresLastMinute >= 5 && failuresLastMinute < MAX_FAILURES_PER_MINUTE) {
+    await alertSec(req, "wrong_password_burst", "medium", "Many wrong passwords in one minute", { failures_last_minute: failuresLastMinute, email_hash: emailHash.slice(0, 12) }, ip);
+  }
   if (failuresLastMinute >= MAX_FAILURES_PER_MINUTE) {
     const cooldown = COOLDOWNS_SECONDS[Math.min(lockoutsLastHour, COOLDOWNS_SECONDS.length - 1)];
     await recordAttempt(emailHash, ipHash, false, `lockout_${cooldown}`);
+    await alertSec(req, "login_locked", isAdminAccount ? "high" : "medium", isAdminAccount ? "ADMIN login locked after too many wrong passwords" : "Login locked after too many wrong passwords", { account: isAdminAccount ? "admin" : "customer", cooldown_seconds: cooldown, email_hash: emailHash.slice(0, 12) }, ip);
     await audit("login_locked", null, { email_hash: emailHash.slice(0, 12), ip_hash: ipHash.slice(0, 12), cooldown_seconds: cooldown }, req);
     return json(req, 429, { error: "rate_limited", retry_after: cooldown }, { "Retry-After": String(cooldown) });
   }

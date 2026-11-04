@@ -2,6 +2,8 @@
 import { chrome } from './layout.js';
 import * as C from './pages/catalog.js';
 import * as A from './pages/account.js';
+import { api, DEMO } from './api.js';
+import { watchForms, waLink, esc } from './util.js';
 const PAGES = {
   home: C.home, products: () => C.listing('products'), trending: () => C.listing('trending'), deals: () => C.listing('deals'), featured: () => C.listing('featured'),
   product: C.product, categories: C.categoriesPage, brands: C.brandsPage, apps: () => C.appsPage(false), apk: () => C.appsPage(true), app: C.appDetail,
@@ -9,9 +11,33 @@ const PAGES = {
   login: A.login, register: A.register, forgot: A.forgot, reset: A.reset, dashboard: A.dashboard, profile: A.profilePage, wishlist: A.wishlistPage, cart: A.cartPage, checkout: A.checkout,
   payment: A.payment, 'payment-submit': A.paymentSubmit, orders: A.orders, order: A.orderDetail, wallet: A.walletPage, returns: A.returnsPage,
 };
+// Maintenance mode: when the admin has UNPUBLISHED the site, visitors see a friendly closed page (admins still see the site, with a banner).
+function closedPage(st) {
+  const wa = (window.SHOPZENT_CONFIG && window.SHOPZENT_CONFIG.WHATSAPP_FALLBACK) || '9942598154';
+  const root = document.body.dataset.root || '.';
+  document.title = 'SHOPZENT — thodi der me wapas | Back soon';
+  document.body.className = ''; document.body.removeAttribute('data-page');
+  document.body.innerHTML = `<main id="main" style="min-height:100vh;display:grid;place-items:center;padding:20px;background:#faf7ff"><div style="max-width:440px;width:100%;background:#fff;border-radius:24px;box-shadow:0 20px 50px rgba(124,58,237,.15);padding:28px 22px;text-align:center">
+    <img src="${root}/assets/logo-lockup.png" alt="SHOPZENT" style="height:44px;margin-bottom:14px">
+    <div style="font-size:3rem;line-height:1" aria-hidden="true">🛠️</div>
+    <h1 style="font-size:1.35rem;margin:12px 0 6px">Website abhi thodi der ke liye band hai</h1>
+    <p style="font-size:1.05rem;margin:0 0 14px"><b>Jaldi wapas aayenge 🙏</b></p>
+    <p style="color:#4b5563;margin:0 0 6px">SHOPZENT is temporarily closed for a short while.<br>We will be back very soon.</p>
+    ${st && st.message ? `<p style="background:#f5f3ff;border-radius:14px;padding:10px 12px;margin:14px 0;color:#4c1d95">${esc(st.message)}</p>` : ''}
+    <a href="${waLink(wa, 'Hi SHOPZENT')}" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;height:50px;border-radius:999px;background:#16a34a;color:#fff;font-weight:600;text-decoration:none;margin-top:16px">💬 WhatsApp: +91 ${esc(wa)}</a>
+    <p style="margin:16px 0 0;font-size:.8rem"><a href="${root}/admin/index.html" style="color:#9ca3af">Admin</a></p></div></main>`;
+}
 (async () => {
   const page = document.body.dataset.page;
+  const statusP = DEMO ? Promise.resolve(null) : api.rpc('public_site_status').catch(() => null); // runs beside the page's own first requests: no extra wait
   try { await chrome(); } catch (e) { console.error(e); }
+  watchForms();
+  const st = await statusP;
+  if (st && st.published === false) {
+    const me = await api.auth.profile().catch(() => null);
+    if (me && ['admin', 'super_admin'].includes(me.role)) document.body.insertAdjacentHTML('afterbegin', '<div style="background:#dc2626;color:#fff;text-align:center;padding:8px;font-weight:600;position:sticky;top:0;z-index:99">🔴 Website is UNPUBLISHED — customers see the closed page. Only you can see this. <a href="admin/dashboard.html" style="color:#fff;text-decoration:underline">Publish again</a></div>');
+    else { closedPage(st); return; }
+  }
   try { if (page && page.startsWith('legal-')) await C.legalPage(page.slice(6)); else if (PAGES[page]) await PAGES[page](); }
   catch (e) { if (e && e.message === 'redirect') return; console.error(e); const m = document.getElementById('main'); if (m && !m.dataset.static) m.insertAdjacentHTML('afterbegin', '<div class="container"><div class="alert bad" style="margin-top:16px">Something went wrong loading this page. Please refresh. If it keeps happening, contact us on WhatsApp.</div></div>'); }
 })();

@@ -8,7 +8,7 @@ const MOD = document.body.dataset.module;
 const NAV = [['Overview', [['dashboard', '📊', 'Dashboard'], ['orders', '📦', 'Orders'], ['payments', '💳', 'Payment verification'], ['returns', '↩️', 'Returns & refunds']]],
   ['Catalogue', [['products', '🛍️', 'Products'], ['content', '🗂️', 'Categories & brands'], ['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
   ['Money & promos', [['coupons', '🎟️', 'Coupons'], ['wallet', '👛', 'Customer wallets'], ['coins', '🪙', 'Coins']]],
-  ['Site & people', [['settings', '⚙️', 'Website settings'], ['domain', '🌐', 'Domain'], ['users', '👥', 'Users'], ['messages', '✉️', 'Messages'], ['security', '🛡️', 'Security & audit']]]];
+  ['Site & people', [['settings', '⚙️', 'Website settings'], ['domain', '🌐', 'Domain'], ['users', '👥', 'Users'], ['messages', '✉️', 'Messages'], ['security', '🛡️', 'Security & audit'], ['alerts', '🚨', 'Hacker alerts']]]];
 let ME = null, FACTOR = null;
 const DEMO_ADMIN_EMAIL = String(window.SHOPZENT_CONFIG?.DEMO_ADMIN?.email || '').trim().toLowerCase(); // preview mode: the only admin email accepted
 const main = () => $('#adm-main');
@@ -24,7 +24,7 @@ export async function loginPage() {
   const render = (html) => { box.innerHTML = `<div class="auth-wrap"><div class="auth-card"><div class="logo-c"><img src="../assets/logo-lockup.png" alt="SHOPZENT"></div><h1 class="center" style="font-size:1.3rem">Admin sign in</h1>${html}</div></div>`; };
   if (await gate()) { location.replace('dashboard.html'); return; }
   const step2 = async () => { ME = await api.auth.profile();
-    if (!ME || !['admin', 'super_admin'].includes(ME.role) || (DEMO && String(ME.email || '').toLowerCase() !== DEMO_ADMIN_EMAIL)) { await api.auth.signOut(); render('<div class="alert bad">This account does not have admin access.</div><a class="btn block" href="index.html">Try again</a>'); return; }
+    if (!ME || !['admin', 'super_admin'].includes(ME.role) || (DEMO && String(ME.email || '').toLowerCase() !== DEMO_ADMIN_EMAIL)) { if (ME && !DEMO) { try { await api.rpc('log_security_event', { p_kind: 'admin_ui_denied', p_target: 'admin login', p_details: { page: location.pathname } }); } catch { /* */ } } await api.auth.signOut(); render('<div class="alert bad">This account does not have admin access.</div><a class="btn block" href="index.html">Try again</a>'); return; }
     if (ME.status !== 'active') { await api.auth.signOut(); render('<div class="alert bad">This admin account is suspended.</div>'); return; }
     const factors = (await api.auth.factors()).filter((f) => f.status === 'verified');
     if (!factors.length) { render(`<div class="alert warn"><b>2-step verification is required for admins.</b> Set up an authenticator app now to continue.</div><button class="btn block" id="en">Set up authenticator</button>`); $('#en').onclick = () => enrollMfa(async () => { await done(); }); return; }
@@ -48,11 +48,13 @@ function shell() {
   document.body.innerHTML = `${DEMO ? '<div class="demo-bar">👀 <b>Preview mode</b> — admin panel running on demo data in this browser only.</div>' : ''}<div class="adm"><aside class="adm-side" id="side"><a href="dashboard.html" style="padding:6px 8px 12px"><img src="../assets/logo-lockup.png" alt="SHOPZENT" style="height:36px"></a>
     ${NAV.map(([g, items]) => `<h5>${g}</h5>${items.map(([k, i, l]) => `<a href="${k}.html" class="${k === MOD ? 'active' : ''}"><span aria-hidden="true">${i}</span>${l}</a>`).join('')}`).join('')}
     <h5>Account</h5><a href="../index.html" target="_blank">🌐 View website</a><a href="../profile.html#security">🔐 My 2FA & recovery codes</a><a href="#" id="lo">🚪 Log out</a></aside><div class="shade-adm" id="shade"></div>
-    <div><div class="adm-top"><button class="icon-btn" id="sb" style="display:grid" aria-label="Menu">${IC.menu}</button><b class="grow">${esc(NAV.flatMap((n) => n[1]).find((x) => x[0] === MOD)?.[2] || 'Admin')}</b><a class="icon-btn" href="dashboard.html#notifications" aria-label="Notifications">${IC.bell}<span class="badge" id="nb"></span></a><span class="tag ${ME.role === 'super_admin' ? 'pink' : ''}">${esc(ME.role.replace('_', ' '))}</span></div>
+    <div><div class="adm-top"><button class="icon-btn" id="sb" style="display:grid" aria-label="Menu">${IC.menu}</button><b class="grow">${esc(NAV.flatMap((n) => n[1]).find((x) => x[0] === MOD)?.[2] || 'Admin')}</b><a class="tag" id="site-pill" href="dashboard.html" style="display:none"></a><a class="icon-btn" href="dashboard.html#notifications" aria-label="Notifications">${IC.bell}<span class="badge" id="nb"></span></a><span class="tag ${ME.role === 'super_admin' ? 'pink' : ''}">${esc(ME.role.replace('_', ' '))}</span></div>
     <main class="adm-main" id="adm-main"><div class="sk" style="height:200px"></div></main></div></div>`;
   const side = $('#side'), shade = $('#shade'); $('#sb').onclick = () => { side.classList.add('open'); shade.classList.add('open'); }; shade.onclick = () => { side.classList.remove('open'); shade.classList.remove('open'); };
   if (matchMedia('(min-width:1000px)').matches) $('#sb').style.display = 'none';
   $('#lo').onclick = async (e) => { e.preventDefault(); await api.auth.signOut(); location.href = 'index.html'; };
+  api.rpc('admin_site_status').then((s) => { const p = $('#site-pill'); if (!p) return; p.style.display = ''; p.className = 'tag ' + (s.published ? 'green' : 'red'); p.textContent = s.published ? '● LIVE' : '● CLOSED'; }).catch(() => {});
+  api.rpc('admin_security_alert_counts').then((c) => { const a = document.querySelector('.adm-side a[href="alerts.html"]'); if (a && c.new_total) a.insertAdjacentHTML('beforeend', `<span class="tag ${c.new_high ? 'red' : 'pink'}" style="margin-left:auto">${c.new_total}</span>`); }).catch(() => {});
   api.rpc('admin_notifications').then((n) => { const u = n.filter((x) => !x.read_at).length; $('#nb').textContent = u || ''; $('#nb').dataset.n = u; }).catch(() => {});
 }
 // ---------- helpers ----------
@@ -161,6 +163,7 @@ M.dashboard = async () => {
   <div class="grid g2" style="margin-top:16px"><div class="card pad" id="notifications"><h3>Notifications</h3>${notes.slice(0, 12).map((n) => `<div style="padding:8px 0;border-bottom:1px solid var(--line)" class="small ${n.read_at ? 'muted' : ''}"><b>${esc(n.title)}</b> — ${esc(n.body)}<div class="tiny muted">${fmtDate(n.created_at)} ${n.read_at ? '' : `<a href="#" data-nr="${esc(n.id)}">mark read</a>`} ${n.link ? `· <a href="${esc(safeUrl(n.link))}">open</a>` : ''}</div></div>`).join('') || '<p class="muted small">No notifications.</p>'}</div>
   <div class="card pad"><h3>Recent activity</h3>${(s.recent || []).map((a) => `<div class="small" style="padding:6px 0;border-bottom:1px solid var(--line)"><code class="tiny">${esc(a.action)}</code> ${esc(a.entity || '')} <span class="tiny muted">· ${esc(a.actor_role || '')} · ${fmtDate(a.created_at)}</span></div>`).join('') || '<p class="muted small">No activity yet.</p>'}</div></div>
   <div class="card pad" style="margin-top:16px"><h3>Coins (internal loyalty points — not money)</h3><p class="small">Issued: <b>${num(s.coins_issued)}</b> · Available in treasury: <b>${num(s.coins_available)}</b> · <a href="coins.html">Manage coins →</a></p></div>`;
+  if (!DEMO) { const kp = main().querySelector('.kpis'); if (kp) await siteCard(kp); }
   $$('[data-nr]').forEach((a) => a.onclick = async (e) => { e.preventDefault(); await api.rpc('mark_notification_read', { p_id: a.dataset.nr }).catch(() => {}); a.closest('div').parentElement.classList.add('muted'); a.remove(); });
 };
 // ----- orders -----
@@ -432,7 +435,8 @@ M.settings = async () => {
       if (key.startsWith('legal_') || key.startsWith('page_')) val.html = val.html ? sanitizeHtml(val.html) : '';
       if (key === 'contact' && val.whatsapp && !/^\d{10,13}$/.test(val.whatsapp.replace(/\D/g, ''))) throw new Error('WhatsApp number should be 10 digits.');
       if (key === 'payment' && val.upi_id && !/^[\w.\-]{2,}@[\w.\-]{2,}$/.test(val.upi_id)) throw new Error('That does not look like a UPI ID (name@bank).');
-      await call('admin_upsert_setting', { p_key: key, p_value: { ...(S[key] || {}), ...val }, p_is_public: !['security', 'blocked_email_domains'].includes(key) }); S[key] = { ...(S[key] || {}), ...val }; ok('Saved ✓'); form.querySelector('.err').textContent = ''; } catch (x) { form.querySelector('.err').textContent = errText(x); } }; });
+      await call('admin_upsert_setting', { p_key: key, p_value: { ...(S[key] || {}), ...val }, p_is_public: !['security', 'blocked_email_domains', 'update_notice'].includes(key) }); S[key] = { ...(S[key] || {}), ...val }; ok('Saved ✓'); form.querySelector('.err').textContent = ''; } catch (x) { form.querySelector('.err').textContent = errText(x); } }; });
+  if (!DEMO) await noticeCard(main().querySelector('details'));
   $('#rmqr')?.addEventListener('click', async () => { if (!await confirmBox('Remove the UPI QR?', 'Customers will see “QR not available — contact us” until you upload a new one.', { ok: 'Remove', danger: true })) return; try { await call('admin_upsert_setting', { p_key: 'payment', p_value: { ...S.payment, qr_url: '' }, p_is_public: true }); ok('QR removed'); M.settings(); } catch (x) { bad(x); } });
 };
 // ----- domain (guide + DNS check; a static site cannot attach a domain to itself) -----
@@ -471,9 +475,101 @@ M.domain = async () => {
     catch (x) { $('#dchk-at').textContent = 'Could not reach the DNS checker right now — try again in a minute.'; } finally { $('#dchk').disabled = false; } });
   if (cur.domain) $('#dchk').click();
 };
+
+// ----- publish / unpublish (maintenance mode) -----
+async function siteCard(before) {
+  let st; try { st = await api.rpc('admin_site_status'); } catch { return; }
+  const live = st.published !== false;
+  before.insertAdjacentHTML('beforebegin', `<div class="card pad" id="site-card" style="margin-bottom:16px;border:2px solid ${live ? '#10B981' : '#EF4444'};background:${live ? '#F0FDF4' : '#FEF2F2'}">
+    <div class="row between" style="gap:12px;align-items:center;flex-wrap:wrap"><div style="min-width:220px;flex:1"><div style="font-size:1.25rem;font-weight:700">${live ? '🟢 Website is LIVE' : '🔴 Website is CLOSED (maintenance)'}</div>
+    <div class="small muted" style="margin-top:4px">${live ? 'Customers can browse and order.' : 'Customers see the “Website abhi thodi der ke liye band hai” page and cannot order. This admin panel works as normal.'}${st.updated_at ? ' · last changed ' + esc(fmtDate(st.updated_at)) : ''}</div></div>
+    <button class="btn" id="site-toggle" style="width:100%;max-width:280px;height:54px;font-size:1.02rem;background:${live ? '#DC2626' : '#16A34A'}">${live ? '⏸️ Unpublish website' : '▶️ Publish website'}</button></div></div>`);
+  $('#site-toggle').onclick = () => {
+    modal(live
+      ? `<h3 style="margin-top:0">Unpublish the website?</h3><p class="small">Customers will immediately see the “thodi der ke liye band hai” page and <b>cannot browse or place orders</b> (also blocked on the server). You and this admin panel keep working. Publish again from the Dashboard.</p><div class="field"><label for="sm">Extra message for customers (optional, max 300 characters)</label><textarea id="sm" maxlength="300" rows="3" placeholder="e.g. Aaj raat 11 baje tak maintenance chal raha hai"></textarea></div><p class="err" id="se"></p><div class="row" style="justify-content:flex-end"><button class="btn sec sm" data-close>Cancel</button><button class="btn sm danger" id="sy">Yes, unpublish</button></div>`
+      : `<h3 style="margin-top:0">Publish the website?</h3><p class="small">Customers will be able to browse and order again right away.</p><p class="err" id="se"></p><div class="row" style="justify-content:flex-end"><button class="btn sec sm" data-close>Cancel</button><button class="btn sm" id="sy" style="background:#16A34A">Yes, publish</button></div>`,
+      { onOpen: (el, close) => { el.querySelector('#sy').onclick = async () => { el.querySelector('#sy').disabled = true; try { await call('admin_set_site_published', { p_published: !live, p_message: live ? (el.querySelector('#sm').value.trim() || null) : null }); close(); ok(live ? 'Website is now CLOSED' : 'Website is LIVE again'); M.dashboard(); const p = $('#site-pill'); if (p) { p.className = 'tag ' + (live ? 'red' : 'green'); p.textContent = live ? '● CLOSED' : '● LIVE'; } } catch (x) { el.querySelector('#se').textContent = errText(x); el.querySelector('#sy').disabled = false; } }; } });
+  };
+}
+
+// ----- customer "new update" notices (Settings card) -----
+async function noticeCard(before) {
+  if (!before) return;
+  let s; try { s = await api.rpc('admin_update_notice_status'); } catch { return; }
+  before.insertAdjacentHTML('beforebegin', `<div class="card pad" id="notice-card" style="margin-bottom:12px"><h3 style="margin-top:0">🔔 Customer update notices</h3>
+    <p class="small muted">When you change the website (products, prices, banners, settings…), every customer gets a bell message “Website me naya update hua hai. Dekhne ke liye refresh karein.” — it never says <i>what</i> changed. In-app only; nothing goes out by email, SMS or WhatsApp.</p>
+    <form id="nf" class="grid g2" style="gap:12px"><label class="row" style="gap:8px;align-items:center"><input type="checkbox" id="n-on" ${s.enabled ? 'checked' : ''}> <b>Send update notices automatically</b></label>
+    <div class="field" style="margin:0"><label for="n-cd">At most one notice every … hours</label><input id="n-cd" type="number" min="0.25" max="720" step="0.25" value="${esc(Number(s.cooldown_hours))}"></div>
+    <label class="row small" style="gap:8px;align-items:center;opacity:.6"><input type="checkbox" disabled> Also send by email (not available — always OFF, nothing is ever emailed)</label>
+    <div class="small muted">Last notice: <b>${s.last_sent_at ? esc(fmtDate(s.last_sent_at)) : 'never'}</b>${s.last_recipients != null ? ` (${num(s.last_recipients)} customers)` : ''}<br>${s.pending ? 'Edits are waiting — one notice goes out when the wait is over.' : 'No edits waiting.'} · Customers now: <b>${num(s.customers)}</b></div>
+    <p class="err" id="ne" style="grid-column:1/-1;margin:0"></p><div class="row" style="grid-column:1/-1;gap:10px;flex-wrap:wrap"><button class="btn sm" id="n-save">Save</button><button class="btn sec sm" type="button" id="n-now">📣 Send update notice now</button></div></form></div>`);
+  $('#nf').onsubmit = async (e) => { e.preventDefault(); try { await call('admin_upsert_setting', { p_key: 'update_notice', p_value: { enabled: $('#n-on').checked, cooldown_hours: Number($('#n-cd').value), send_email: false }, p_is_public: false }); ok('Saved ✓'); $('#ne').textContent = ''; } catch (x) { $('#ne').textContent = errText(x); } };
+  $('#n-now').onclick = async () => { if (!await confirmBox('Send update notice now?', `All ${num(s.customers)} customers get the “naya update” bell message right away (ignores the wait time).`, { ok: 'Send now' })) return;
+    try { const r = await call('admin_send_update_notice', {}); ok(`Sent to ${num(r.recipients)} customers ✓`); } catch (x) { bad(x.message === 'too_soon' || /too_soon/.test(x.message) ? new Error('Just sent — wait a minute.') : x); } };
+}
+
+// ----- hacker alerts -----
+const KIND = { login_locked: 'Login locked: too many wrong passwords', login_locked_retry: 'Keeps trying a locked login', wrong_password_burst: 'Many wrong passwords', admin_login_failed: 'ADMIN login failed',
+  mfa_failure: 'Wrong 2-step code', disposable_signup: 'Fake / temporary email signup', duplicate_utr: 'Used payment reference (UTR) again', bulk_orders: 'Many orders in a short time',
+  frame_bust: 'Site shown inside another website', injection_payload: 'Script / SQL-looking text', admin_ui_denied: 'Customer opened the admin panel' };
+const SEV = { low: ['gray', '#9CA3AF'], medium: ['orange', '#F97316'], high: ['red', '#EF4444'], critical: ['dark', '#7F1D1D'] };
+M.alerts = async () => {
+  const F = { severity: '', status: '', from: '', to: '', ip: '' };
+  main().innerHTML = head('Hacker alerts', '<button class="btn sec sm" id="al-blocked">🚫 Blocked IPs</button><button class="btn sec sm" id="al-ackall">✔ Acknowledge all</button>') + `
+  <div class="kpis" id="al-kpi"></div>
+  <div class="card pad" style="margin-bottom:12px"><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">
+    <div class="field" style="margin:0"><label for="f-sev">Severity</label><select id="f-sev"><option value="">All</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+    <div class="field" style="margin:0"><label for="f-st">Status</label><select id="f-st"><option value="">All</option><option value="new">New</option><option value="acknowledged">Acknowledged</option><option value="handled">Handled</option></select></div>
+    <div class="field" style="margin:0"><label for="f-from">From date</label><input id="f-from" type="date"></div>
+    <div class="field" style="margin:0"><label for="f-to">To date</label><input id="f-to" type="date"></div>
+    <div class="field" style="margin:0"><label for="f-ip">IP address</label><input id="f-ip" placeholder="e.g. 203.0.113.7" maxlength="45"></div></div></div>
+  <div id="al-list"><div class="sk" style="height:120px"></div></div>
+  <details class="card pad" style="margin-top:14px"><summary><b>What this can and cannot catch</b></summary><div class="small" style="margin-top:8px;line-height:1.6">
+    <b>Caught and recorded (with time, IP, device, target):</b> too many wrong passwords and login lockouts; repeated failed ADMIN logins; wrong 2-step codes; fake/temporary-email signups (many from one IP = High); re-used payment references (UTR); many orders in a short time; other websites framing yours; script/SQL-looking text in forms.<br>
+    <b>Block this IP</b> is enforced on login, signup and ordering. Phone networks share IPs, so prefer “24 hours”.<br>
+    <b>Cannot be caught on a static site + Supabase:</b> someone calling the database API directly with a customer login (the database refuses it, but a refused call cannot write a log); DDoS / traffic floods (use Cloudflare); attacks that never reach our login, signup or order code; a stolen password used correctly (looks like a normal login). The real protection is the lock itself: 2-step codes for admins, strict database rules, rate limits.</div></details>`;
+  const load = async () => {
+    $('#al-list').innerHTML = '<div class="sk" style="height:120px"></div>';
+    try {
+      const day = (v, add = 0) => v ? new Date(new Date(v + 'T00:00:00').getTime() + add * 864e5).toISOString() : null;
+      const [rows, c] = await Promise.all([call('admin_list_security_alerts', { p_severity: F.severity || null, p_status: F.status || null, p_from: day(F.from), p_to: day(F.to, 1), p_ip: F.ip.trim() || null, p_limit: 200 }), api.rpc('admin_security_alert_counts')]);
+      $('#al-kpi').innerHTML = `<div class="kpi ${c.new_total ? 'g' : ''}"><b>${num(c.new_total)}</b><span>New alerts</span></div><div class="kpi ${c.new_high ? 'g' : ''}"><b>${num(c.new_high)}</b><span>New High / Critical</span></div><div class="kpi"><b>${num(c.last_24h)}</b><span>Last 24 hours</span></div>`;
+      $('#al-list').innerHTML = rows.map((r) => `<div class="card pad" data-id="${esc(r.id)}" style="margin-bottom:10px;cursor:pointer;border-left:6px solid ${(SEV[r.severity] || SEV.low)[1]};${r.status === 'new' ? '' : 'opacity:.7'}">
+        <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><span class="tag ${(SEV[r.severity] || SEV.low)[0]}">${esc(r.severity.toUpperCase())}</span><span class="tag ${r.status === 'new' ? 'pink' : r.status === 'handled' ? 'green' : 'cyan'}">${esc(r.status)}</span>${r.count > 1 ? `<span class="tag dark">× ${num(r.count)}</span>` : ''}${r.ip_blocked ? '<span class="tag red">IP blocked</span>' : ''}</div>
+        <div style="font-weight:600;margin-top:6px">${esc(KIND[r.kind] || r.kind)}</div><div class="small">${esc(r.summary)}</div>
+        <div class="tiny muted" style="margin-top:4px">🌐 ${esc(r.ip || 'IP unknown')} · ${esc(fmtDate(r.last_seen_at))}${r.target ? ' · ' + esc(r.target) : ''}</div></div>`).join('') || '<div class="card pad center muted">No alerts for these filters. 🎉</div>';
+      $$('#al-list [data-id]').forEach((el) => el.onclick = () => detail(rows.find((x) => x.id === el.dataset.id)));
+    } catch (x) { $('#al-list').innerHTML = `<div class="alert bad">${esc(errText(x))}</div>`; }
+  };
+  const detail = (r) => {
+    const row = (k, v) => `<div style="padding:7px 0;border-bottom:1px solid var(--line)"><div class="tiny muted">${k}</div><div class="small" style="word-break:break-word">${v}</div></div>`;
+    modal(`<h3 style="margin-top:0">${esc(KIND[r.kind] || r.kind)}</h3><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:6px"><span class="tag ${(SEV[r.severity] || SEV.low)[0]}">${esc(r.severity.toUpperCase())}</span><span class="tag ${r.status === 'new' ? 'pink' : 'green'}">${esc(r.status)}</span>${r.ip_blocked ? '<span class="tag red">IP blocked</span>' : ''}</div>
+      <div style="max-height:52vh;overflow:auto">${row('What happened', esc(r.summary))}${row('Times seen', num(r.count) + (r.count > 1 ? ' (same IP, grouped)' : ''))}${row('First seen', esc(fmtDate(r.created_at)))}${row('Last seen', esc(fmtDate(r.last_seen_at)))}${row('IP address', `<code>${esc(r.ip || 'unknown')}</code>`)}${row('Device / browser (user agent)', esc(r.user_agent || 'not available'))}${row('Target (page / endpoint)', esc(r.target || '—'))}${r.user_email ? row('Customer account', esc(r.user_email)) : ''}${row('Extra details', `<pre style="white-space:pre-wrap;margin:0;font-size:.74rem">${esc(JSON.stringify(r.details || {}, null, 2))}</pre>`)}${r.handled_at ? row('Handled', esc(fmtDate(r.handled_at))) : ''}${row('Your note', `<textarea id="al-note" rows="2" maxlength="500" style="width:100%" placeholder="optional">${esc(r.note || '')}</textarea>`)}</div>
+      <p class="err" id="al-err"></p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:10px"><button class="btn sec sm" data-close>Close</button>
+      ${r.ip ? `<button class="btn sec sm" id="al-same">Same IP</button><button class="btn sm ${r.ip_blocked ? 'sec' : 'danger'}" id="al-block">${r.ip_blocked ? 'Unblock IP' : '🚫 Block this IP'}</button>` : ''}
+      ${r.status !== 'new' ? '<button class="btn sec sm" id="al-new">Reopen</button>' : '<button class="btn sec sm" id="al-ack">Acknowledge</button>'}${r.status !== 'handled' ? '<button class="btn sm" id="al-done">✔ Mark handled</button>' : ''}</div>`,
+      { wide: true, onOpen: (el, close) => {
+        const set = (st) => async () => { try { await call('admin_set_security_alert_status', { p_id: r.id, p_status: st, p_note: el.querySelector('#al-note').value.trim() || null }); close(); ok('Saved ✓'); load(); } catch (x) { el.querySelector('#al-err').textContent = errText(x); } };
+        el.querySelector('#al-ack')?.addEventListener('click', set('acknowledged')); el.querySelector('#al-done')?.addEventListener('click', set('handled')); el.querySelector('#al-new')?.addEventListener('click', set('new'));
+        el.querySelector('#al-same')?.addEventListener('click', () => { close(); F.ip = r.ip; $('#f-ip').value = r.ip; load(); });
+        el.querySelector('#al-block')?.addEventListener('click', async () => { if (r.ip_blocked) { try { await call('admin_unblock_ip', { p_ip: r.ip }); close(); ok('IP unblocked'); load(); } catch (x) { el.querySelector('#al-err').textContent = errText(x); } } else { close(); blockModal(r.ip, r.summary); } });
+      } });
+  };
+  const blockModal = (ip, why) => modal(`<h3 style="margin-top:0">🚫 Block ${esc(ip)}?</h3><p class="small">This address will be refused at <b>login, signup and ordering</b>. Real customers on the same phone network could be blocked too, so a short block is safer.</p>
+    <div class="field"><label for="bl-h">For how long</label><select id="bl-h"><option value="24">24 hours</option><option value="168">7 days</option><option value="">Until I unblock it</option></select></div><p class="err" id="bl-err"></p>
+    <div class="row" style="justify-content:flex-end"><button class="btn sec sm" data-close>Cancel</button><button class="btn sm danger" id="bl-ok">Block</button></div>`,
+    { onOpen: (el, close) => { el.querySelector('#bl-ok').onclick = async () => { try { const h = el.querySelector('#bl-h').value; await call('admin_block_ip', { p_ip: ip, p_reason: String(why || '').slice(0, 200), p_hours: h ? Number(h) : null }); close(); ok('IP blocked'); load(); } catch (x) { el.querySelector('#bl-err').textContent = /cannot_block_own_ip/.test(x.message) ? 'That is your own IP address — not blocked.' : errText(x); } }; } });
+  $('#al-blocked').onclick = async () => { try { const b = await call('admin_list_blocked_ips', {});
+    modal(`<h3 style="margin-top:0">🚫 Blocked IPs</h3><div style="max-height:55vh;overflow:auto">${b.map((x) => `<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line);gap:8px"><div><code>${esc(x.ip)}</code><div class="tiny muted">${esc(x.reason || '')} · ${x.expires_at ? 'until ' + esc(fmtDate(x.expires_at)) : 'until unblocked'}</div></div><button class="btn sec sm" data-ub="${esc(x.ip)}">Unblock</button></div>`).join('') || '<p class="muted small">No IPs are blocked.</p>'}</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn sec sm" data-close>Close</button></div>`,
+      { onOpen: (el, close) => el.querySelectorAll('[data-ub]').forEach((bt) => bt.onclick = async () => { try { await call('admin_unblock_ip', { p_ip: bt.dataset.ub }); close(); ok('Unblocked'); load(); } catch (x) { bad(x); } }) }); } catch (x) { bad(x); } };
+  $('#al-ackall').onclick = async () => { if (!await confirmBox('Acknowledge all new alerts?', 'They stay in the list (marked acknowledged). Use this after you have looked through them.', { ok: 'Acknowledge all' })) return; try { const n = await call('admin_acknowledge_all_alerts', {}); ok(`${n} alerts acknowledged`); load(); } catch (x) { bad(x); } };
+  [['f-sev', 'severity'], ['f-st', 'status'], ['f-from', 'from'], ['f-to', 'to'], ['f-ip', 'ip']].forEach(([id, k]) => $('#' + id).addEventListener('change', (e) => { F[k] = e.target.value; load(); }));
+  await load();
+};
+
 // ---------- boot ----------
 (async () => {
   if (MOD === 'login') { await loginPage(); return; }
-  if (!(await gate())) { location.replace('index.html?next=' + encodeURIComponent(location.pathname.split('/').pop())); return; }
+  if (!(await gate())) { if (ME && !['admin', 'super_admin'].includes(ME.role)) { try { await api.rpc('log_security_event', { p_kind: 'admin_ui_denied', p_target: MOD || 'admin', p_details: { page: location.pathname } }); } catch { /* */ } } location.replace('index.html?next=' + encodeURIComponent(location.pathname.split('/').pop())); return; }
   shell(); try { await (M[MOD] || M.dashboard)(); } catch (x) { console.error(x); main().insertAdjacentHTML('afterbegin', `<div class="alert bad">${esc(errText(x))}</div>`); }
 })();

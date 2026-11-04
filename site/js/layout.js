@@ -1,6 +1,6 @@
 // Shared layout: header, navigation, footer, bottom nav, cart/wishlist state, product cards.
 import { api, DEMO, config } from './api.js';
-import { $, $$, esc, inr, safeUrl, safeImg, toast, waLink, reveal } from './util.js';
+import { $, $$, esc, inr, safeUrl, safeImg, toast, waLink, reveal, modal, fmtDate } from './util.js';
 export const ROOT = document.body.dataset.root || '.';
 export const href = (p) => (ROOT === '.' ? p : ROOT + '/' + p);
 export const media = (u) => { const s = safeImg(u); if (!s) return ''; if (/^(https:|data:)/.test(s)) return s; return href(s.replace(/^\.\//, '')); };
@@ -102,6 +102,7 @@ export async function chrome() {
     <a class="logo" href="${href('index.html')}" aria-label="SHOPZENT home"><img src="${esc(media(s.brand?.logo_url) || href('assets/logo-lockup.png'))}" alt="${esc(s.brand?.name || 'SHOPZENT')} — Discover More. Shop Smarter." width="210" height="36"></a>
     <form class="search" role="search" action="${href('products.html')}"><input name="q" type="search" placeholder="Search products, brands…" aria-label="Search products" maxlength="80" value="${esc(new URLSearchParams(location.search).get('q') || '')}"><button aria-label="Search">${IC.search.replace('<svg', '<svg width="16" height="16"')}</button></form>
     <div class="hdr-actions"><a class="icon-btn hide-sm" href="${href('wishlist.html')}" aria-label="Wishlist">${IC.heart}</a>
+      ${p ? `<button class="icon-btn" id="bell-btn" type="button" aria-label="Notifications">${IC.bell}<span class="badge" id="bell-n" style="display:none"></span></button>` : ''}
       <a class="icon-btn" href="${href('cart.html')}" aria-label="Cart">${IC.cart}<span class="badge" data-cart-count></span></a>
       <a class="icon-btn hide-sm" href="${href(p ? 'dashboard.html' : 'login.html')}" aria-label="${p ? 'My account' : 'Log in'}">${IC.user}</a></div>
   </div><nav class="nav" aria-label="Main"><div class="container"><ul>${NAV.map(([h, l]) => `<li><a href="${href(h)}" class="${h === here ? 'active' : ''}">${l}</a></li>`).join('')}</ul></div></nav></header>
@@ -114,6 +115,7 @@ export async function chrome() {
     ${p && ['admin', 'super_admin'].includes(p.role) ? `<h4>Admin</h4><a href="${href('admin/index.html')}">🛡️ Admin Panel</a>` : ''}
     ${p ? `<a href="#" data-logout>Log out</a>` : ''}</div></div>`;
   document.body.prepend(top);
+  if (p && !DEMO) initBell();
   const year = new Date().getFullYear(); const so = s.social || {};
   const socials = [['instagram', IC.ig], ['youtube', IC.yt], ['facebook', IC.fb], ['x', IC.x], ['telegram', IC.tg]].filter(([k]) => safeUrl(so[k], false)).map(([k, i]) => `<a href="${esc(safeUrl(so[k], false))}" target="_blank" rel="noopener" aria-label="${k}">${i}</a>`).join('');
   const f = document.createElement('footer'); f.className = 'ftr';
@@ -136,3 +138,18 @@ export async function chrome() {
   updateBadges(); reveal();
 }
 export async function requireLogin() { const p = await profile(); if (!p) { const here = location.pathname.split('/').pop() || 'index.html'; location.replace(href('login.html?next=' + encodeURIComponent(here === 'checkout.html' ? 'cart.html' : here + location.search))); throw new Error('redirect'); } return p; }
+
+// Customer notification bell: unread count + the latest messages (order updates, "new update on the website" notices). Loads after the page, never blocks it.
+async function initBell() {
+  const btn = document.getElementById('bell-btn'); if (!btn) return;
+  const paint = (n) => { const b = document.getElementById('bell-n'); if (b) { b.textContent = n > 9 ? '9+' : String(n); b.style.display = n ? '' : 'none'; } };
+  let rows = [];
+  try { rows = await api.select('notifications', { order: { col: 'created_at', asc: false }, limit: 20 }); } catch { return; }
+  paint(rows.filter((r) => !r.read_at).length);
+  btn.addEventListener('click', async () => {
+    modal(`<h3 style="margin-top:0">🔔 Notifications</h3><div style="max-height:60vh;overflow:auto">${rows.map((n) => `<div style="padding:10px 0;border-bottom:1px solid var(--line)" class="${n.read_at ? 'muted' : ''}"><b>${esc(n.title)}</b><br><span class="small">${esc(n.body || '')}</span><div class="tiny muted">${fmtDate(n.created_at)}${n.link && safeUrl(n.link) ? ` · <a href="${esc(href(safeUrl(n.link)))}">open</a>` : ''}</div></div>`).join('') || '<p class="muted small">No notifications yet.</p>'}</div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn sec sm" data-close>Close</button><button class="btn sm" id="bell-refresh">Refresh page</button></div>`,
+      { onOpen: (el) => { el.querySelector('#bell-refresh').onclick = () => location.reload(); } });
+    if (rows.some((r) => !r.read_at)) { paint(0); api.rpc('mark_all_notifications_read').catch(() => {}); rows = rows.map((r) => ({ ...r, read_at: r.read_at || new Date().toISOString() })); }
+  });
+}
