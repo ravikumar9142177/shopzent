@@ -30,11 +30,11 @@ export const IC = {
 export const cart = {
   get() { try { return JSON.parse(localStorage.getItem('sz_cart') || '[]').filter((i) => i && i.product_id); } catch { return []; } },
   set(items) { localStorage.setItem('sz_cart', JSON.stringify(items.slice(0, 30))); updateBadges(); },
-  add(id, qty = 1) { const c = cart.get(); const i = c.find((x) => x.product_id === id); if (i) i.qty = Math.min(20, i.qty + qty); else c.push({ product_id: id, qty: Math.min(20, qty) }); cart.set(c); },
-  qty(id, qty) { const c = cart.get().map((x) => x.product_id === id ? { ...x, qty: Math.max(1, Math.min(20, qty)) } : x); cart.set(c); },
-  remove(id) { cart.set(cart.get().filter((x) => x.product_id !== id)); },
+  // one cart line per product + size (size '' = no size)
+  add(id, qty = 1, size = '') { const sz = size || ''; const c = cart.get(); const i = c.find((x) => x.product_id === id && (x.size || '') === sz); if (i) i.qty = Math.min(20, i.qty + qty); else c.push({ product_id: id, qty: Math.min(20, qty), ...(sz ? { size: sz } : {}) }); cart.set(c); },
+  qty(id, qty, size = '') { const sz = size || ''; const c = cart.get().map((x) => x.product_id === id && (x.size || '') === sz ? { ...x, qty: Math.max(1, Math.min(20, qty)) } : x); cart.set(c); },
+  remove(id, size = '') { const sz = size || ''; cart.set(cart.get().filter((x) => !(x.product_id === id && (x.size || '') === sz))); },
   clear() { cart.set([]); },
-  count() { return cart.get().reduce((a, x) => a + x.qty, 0); },
 };
 let _settings = null, _profile, _wish = null, _cats = null, _brands = null;
 export async function settings() { if (_settings) return _settings; try { const rows = await api.select('site_settings'); _settings = Object.fromEntries(rows.map((r) => [r.key, r.value || {}])); } catch { _settings = {}; }
@@ -61,11 +61,11 @@ export function productCard(p, wish = new Set()) {
     <div class="body"><div class="row between"><span class="brand">${esc(p._brand || '')}</span><span class="mkt ${esc(p.marketplace)}">${esc(mktName(p.marketplace))}</span></div>
     <h3><a href="${href('product.html?slug=' + encodeURIComponent(p.slug))}">${esc(p.name)}</a></h3>${priceHtml}
     ${p.purchase_type === 'affiliate' && p.price != null && p.price_verified_at ? `<span class="tiny muted">Price checked ${new Date(p.price_verified_at).toLocaleDateString('en-IN')}</span>` : ''}
-    <div class="foot">${aff ? (hasLink ? `<button class="btn sm block" data-aff="${esc(p.id)}">Buy on ${esc(mktName(p.marketplace))} ${IC.ext}</button>` : `<a class="btn sm sec block" href="${purl}">View details</a>`) : p.availability === 'out_of_stock' ? '<button class="btn sm sec block" disabled>Out of stock</button>' : noPrice ? `<a class="btn sm sec block" href="${purl}">View details</a>` : `<button class="btn sm block" data-add="${esc(p.id)}">Add to cart</button>`}</div></div></article>`;
+    <div class="foot">${aff ? (hasLink ? `<button class="btn sm block" data-aff="${esc(p.id)}">Buy on ${esc(mktName(p.marketplace))} ${IC.ext}</button>` : `<a class="btn sm sec block" href="${purl}">View details</a>`) : p.availability === 'out_of_stock' ? '<button class="btn sm sec block" disabled>Out of stock</button>' : noPrice ? `<a class="btn sm sec block" href="${purl}">View details</a>` : (p._sizes ? `<a class="btn sm block" href="${purl}">Size chuniye 👕</a>` : `<button class="btn sm block" data-add="${esc(p.id)}">Add to cart</button>`)}</div></div></article>`;
 }
 export const mktName = (m) => ({ amazon: 'Amazon', flipkart: 'Flipkart', shopzent: 'SHOPZENT', other: 'Partner store' }[m] || 'Partner store');
 export function skeletonCards(n = 4) { return Array.from({ length: n }, () => '<div class="sk-card"><div class="sk sk-img"></div><div class="sk sk-l"></div><div class="sk sk-l" style="width:60%"></div></div>').join(''); }
-export async function decorate(products) { const [b, c] = await Promise.all([brands(), categories()]); const bm = Object.fromEntries(b.map((x) => [x.id, x.name])), cm = Object.fromEntries(c.map((x) => [x.id, x])); products.forEach((p) => { p._brand = bm[p.brand_id] || ''; p._cat = cm[p.category_id]; }); return products; }
+export async function decorate(products) { const [b, c] = await Promise.all([brands(), categories()]); const bm = Object.fromEntries(b.map((x) => [x.id, x.name])), cm = Object.fromEntries(c.map((x) => [x.id, x])); products.forEach((p) => { p._brand = bm[p.brand_id] || ''; p._cat = cm[p.category_id]; p._sizes = (p.sizes_enabled ?? p._cat?.has_sizes) === true; }); return products; }
 export async function renderProducts(el, products, emptyMsg = 'No products here yet.') { if (!products.length) { el.innerHTML = `<div class="empty" style="grid-column:1/-1"><img src="${href('assets/img/empty.svg')}" alt=""><p>${esc(emptyMsg)}</p></div>`; return; } await decorate(products); const w = await wishlistIds(); el.innerHTML = products.map((p) => productCard(p, w)).join(''); }
 export async function openAffiliate(id) { const win = window.open('', '_blank'); try { const url = await api.rpc('track_affiliate_click', { p_product_id: id }); const u = safeUrl(url, false); if (!u) throw new Error(); if (win) { win.opener = null; win.location.href = u; } else location.href = u; } catch { win && win.close(); toast('This affiliate link is not available right now.', 'bad'); } }
 document.addEventListener('click', async (e) => {

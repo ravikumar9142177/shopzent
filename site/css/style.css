@@ -256,3 +256,10 @@ body.admin{background:#F6F5FB;padding-bottom:0}
 
 button,input,select,textarea{font-family:inherit}
 @media(max-width:899px){body[data-page=payment] aside.side{order:-1}}
+
+/* sizes (fashion) */
+.size-chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.size-chip{min-width:48px;min-height:44px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font:600 .95rem Poppins,sans-serif;cursor:pointer}
+.size-chip.on{border-color:var(--purple);background:#F5F3FF;color:var(--purple)}
+.size-chip:disabled{opacity:.45;text-decoration:line-through;cursor:not-allowed}
+.size-chip small{font-size:.7rem;font-weight:500}
