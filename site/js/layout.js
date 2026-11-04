@@ -35,6 +35,7 @@ export const cart = {
   qty(id, qty, size = '') { const sz = size || ''; const c = cart.get().map((x) => x.product_id === id && (x.size || '') === sz ? { ...x, qty: Math.max(1, Math.min(20, qty)) } : x); cart.set(c); },
   remove(id, size = '') { const sz = size || ''; cart.set(cart.get().filter((x) => !(x.product_id === id && (x.size || '') === sz))); },
   clear() { cart.set([]); },
+  count() { return cart.get().reduce((a, x) => a + x.qty, 0); },
 };
 let _settings = null, _profile, _wish = null, _cats = null, _brands = null;
 export async function settings() { if (_settings) return _settings; try { const rows = await api.select('site_settings'); _settings = Object.fromEntries(rows.map((r) => [r.key, r.value || {}])); } catch { _settings = {}; }
