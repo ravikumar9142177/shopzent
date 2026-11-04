@@ -15,8 +15,9 @@
 import { handlePreflight, json, originRefused, sha256Hex } from "../_shared/cors.ts";
 
 const SUPABASE_URL = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
-const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+// New API keys (publishable/secret) first; the legacy JWT keys are disabled.
+const ANON_KEY = Deno.env.get("SZ_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || "";
+const SERVICE_KEY = Deno.env.get("SZ_SECRET_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const CAPTCHA_PROVIDER = (Deno.env.get("CAPTCHA_PROVIDER") ?? "turnstile").toLowerCase();
 const CAPTCHA_SECRET = Deno.env.get("CAPTCHA_SECRET") ?? "";
 const PEPPER = Deno.env.get("HASH_PEPPER") ?? "";

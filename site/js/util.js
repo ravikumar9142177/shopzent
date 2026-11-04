@@ -1,3 +1,5 @@
+// Clickjacking guard: GitHub Pages cannot send X-Frame-Options / frame-ancestors, so refuse to run inside another site's frame.
+if (typeof window !== 'undefined' && window.top !== window.self) { try { window.top.location.replace(window.self.location.href); } catch { document.documentElement.innerHTML = ''; } }
 // Shared helpers (no dependencies)
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
