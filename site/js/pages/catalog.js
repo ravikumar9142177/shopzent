@@ -10,8 +10,7 @@ export async function home() {
   const s = await settings(); const h = s.home || {};
   main().innerHTML = `
   <section class="hero"><span class="hero-blob b1" aria-hidden="true"></span><span class="hero-blob b2" aria-hidden="true"></span><span class="hero-blob b3" aria-hidden="true"></span><span class="hero-blob b4" aria-hidden="true"></span><div class="container hero-in"><div>
-    <span class="tag" style="background:rgba(255,255,255,.2);color:#fff">✨ India's colourful shopping hub</span>
-    <h1>${esc(h.hero_title || 'Discover More. Shop Smarter.')}</h1><p class="lead">${esc(h.hero_subtitle || '')}</p>
+    <h1 class="sr-only">${esc(h.hero_title || 'Discover More. Shop Smarter.')}</h1>
     <form class="search" action="products.html" role="search"><input name="q" type="search" placeholder="Search earbuds, kurtas, chargers…" aria-label="Search" maxlength="80"><button aria-label="Search">${IC.search.replace('<svg', '<svg width="18" height="18"')}</button></form>
     <div class="offer-slider" aria-label="Offers"><div class="offer-track" id="offer-track">
       <a class="offer" href="deals.html" style="--c1:#F97316;--c2:#EC4899;--c3:#B4380F"><b>Best Deals</b><span class="s">Handpicked offers, checked by our team</span><span class="go">Shop deals →</span><span class="big" aria-hidden="true">💸</span></a>
@@ -19,8 +18,7 @@ export async function home() {
       <a class="offer" href="offers.html" style="--c1:#EC4899;--c2:#A855F7;--c3:#86198F"><b>Coupons &amp; Offers</b><span class="s">Save more on every order</span><span class="go">Get coupons →</span><span class="big" aria-hidden="true">🎟️</span></a>
       <a class="offer" href="wallet.html" style="--c1:#0EA5E9;--c2:#7C3AED;--c3:#1E3A8A"><b>Share &amp; Earn Coins</b><span class="s">Share our products, earn coins after delivery</span><span class="go">My wallet →</span><span class="big" aria-hidden="true">🪙</span></a>
     </div><div class="offer-dots" id="offer-dots"><i class="on"></i><i></i><i></i><i></i></div></div>
-    <div class="chips"><a href="trending.html">🔥 Trending</a><a href="deals.html">💸 Best deals</a><a href="offers.html">🎟️ Coupons</a><a href="apps.html">📲 Apps</a></div>
-    <div class="stats"><div><b>Amazon + Flipkart</b><span>handpicked affiliate deals</span></div><div><b>UPI</b><span>simple, verified payments</span></div><div><b>2FA</b><span>secured admin & accounts</span></div></div></div>
+    </div>
     <div class="hero-art" aria-hidden="true"><div class="float-card"><picture><source srcset="assets/banners/categories-suraj.webp" type="image/webp"><img src="assets/banners/categories-suraj.jpg" alt="" style="border-radius:14px" width="1080" height="691"></picture></div></div>
   </div></section>
   <section class="sec reveal"><div class="container"><div class="sec-h"><div><span class="eyebrow">Shop by category</span><h2>Categories</h2></div><a href="categories.html">View all →</a></div><div class="cats" id="h-cats">${'<div class="sk" style="height:110px"></div>'.repeat(6)}</div></div></section>

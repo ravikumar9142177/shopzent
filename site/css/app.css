@@ -103,3 +103,16 @@
 @media(prefers-reduced-motion:reduce){.offer .big{animation:none}.offer{transform:none}}
 
 .hero-in>div{min-width:0}.offer-slider{max-width:100%}
+
+/* Hero background: soft aesthetic mesh instead of the dark photo (Nov 5) */
+.hero{background-image:radial-gradient(60% 55% at 12% 8%,rgba(255,170,214,.75),transparent 70%),radial-gradient(55% 50% at 92% 14%,rgba(125,211,252,.7),transparent 70%),radial-gradient(70% 60% at 70% 100%,rgba(196,160,255,.8),transparent 70%),radial-gradient(50% 45% at 0% 95%,rgba(253,186,116,.55),transparent 70%),linear-gradient(160deg,#EFE6FF 0%,#F8E8F6 45%,#E6F1FF 100%)!important;background-color:#F3EBFF;color:#2a1650;border-radius:0 0 34px 34px}
+.hero::before{background:conic-gradient(from 0deg,transparent,rgba(255,255,255,.55),transparent 30%,rgba(168,85,247,.12),transparent 60%);opacity:.8}
+.hero::after{background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0) 40%,rgba(255,255,255,.25) 100%)}
+.hero .hero-in{padding-top:22px;padding-bottom:12px}
+.hero h1.sr-only{position:absolute}
+.hero .search{margin:6px 0 4px;box-shadow:0 12px 28px -10px rgba(124,58,237,.45),inset 0 0 0 1px rgba(124,58,237,.12)}
+.hero-blob.b1{background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.95),rgba(255,255,255,0) 65%)}
+.hero-blob.b2{background:linear-gradient(135deg,rgba(236,72,153,.35),rgba(124,58,237,.05))}
+.hero-blob.b3{background:linear-gradient(135deg,rgba(249,115,22,.45),rgba(236,72,153,.08))}
+.hero-blob.b4{background:#fff;opacity:.9}
+.offer-dots i{background:rgba(124,58,237,.25)}.offer-dots i.on{background:#7C3AED}.offer-track{padding-bottom:20px}
