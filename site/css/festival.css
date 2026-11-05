@@ -1,0 +1,74 @@
+.fz{--fz-a:#f59e0b;--fz-b1:#ef4444;--fz-b2:#7c2d12;--fz-top:0px;--fz-b:16px;pointer-events:none}
+@media (max-width:899px){body.has-bnav .fz{--fz-b:76px}}
+.fz-band{position:fixed;left:0;right:0;top:var(--fz-top,0px);height:34px;z-index:55;pointer-events:none;overflow:hidden;display:flex;align-items:flex-start;justify-content:space-evenly;padding:0 6px}
+.fz-prev .fz-band{position:absolute;top:0;left:0;right:0}
+.fz-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:45;pointer-events:none}
+.fz-prev .fz-canvas{position:absolute;inset:0}
+/* diya lamp: string, bowl, flame (CSS only) */
+.fz-dya{position:relative;width:20px;height:32px;flex:none;transform-origin:50% 0;animation:fzSwing 4.2s ease-in-out infinite}
+.fz-dya::before{content:"";position:absolute;left:50%;top:0;width:1px;height:11px;margin-left:-.5px;background:rgba(255,255,255,.6)}
+.fz-dya i{position:absolute;left:2px;top:11px;width:16px;height:9px;border-radius:0 0 9px 9px;background:linear-gradient(180deg,#fde68a,#b45309 85%);box-shadow:0 3px 5px rgba(0,0,0,.35),inset 0 -2px 2px rgba(0,0,0,.25)}
+.fz-dya b{position:absolute;left:6px;top:1px;width:8px;height:11px;border-radius:50% 50% 40% 40%;background:radial-gradient(circle at 50% 70%,#fffbeb,#fde047 40%,#f97316 85%);transform-origin:50% 100%;animation:fzFlick .8s ease-in-out infinite alternate;box-shadow:0 0 8px 3px rgba(251,191,36,.55)}
+/* chhath: sun glow over a bamboo sup tray with fruit */
+.fz-sun{position:absolute;left:50%;top:-44px;width:120px;height:120px;margin-left:-60px;border-radius:50%;background:radial-gradient(circle,rgba(253,224,71,.9),rgba(249,115,22,.38) 42%,transparent 70%);animation:fzGlow 3.2s ease-in-out infinite;pointer-events:none}
+.fz-sup{position:relative;flex:none;width:96px;height:12px;margin-top:17px;border-radius:50%;background:linear-gradient(180deg,#e7c27d,#8b5a2b);box-shadow:0 4px 6px rgba(0,0,0,.3)}
+.fz-sup em{position:absolute;top:-15px;font-size:14px;font-style:normal;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
+.fz-sup em:nth-child(1){left:6px}.fz-sup em:nth-child(2){left:30px}.fz-sup em:nth-child(3){left:54px}.fz-sup em:nth-child(4){left:76px}
+/* holi colour blobs */
+.fz-blob{position:absolute;width:44px;height:44px;border-radius:50%;filter:blur(3px);opacity:.7;transform:translateY(-8px)}
+/* eid crescent (mask) and twinkling stars */
+.fz-moon{position:absolute;left:50%;top:-6px;width:38px;height:38px;margin-left:-19px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fffbeb,#fde68a 60%,#d97706);-webkit-mask:radial-gradient(circle at 72% 40%,transparent 56%,#000 57%);mask:radial-gradient(circle at 72% 40%,transparent 56%,#000 57%);box-shadow:0 0 16px 4px rgba(253,230,138,.45)}
+.fz-star{position:absolute;top:8px;font-style:normal;font-size:10px;color:#fde68a;text-shadow:0 0 6px #fde68a;animation:fzTw 2.2s ease-in-out infinite}
+/* christmas garland */
+.fz-wire{position:absolute;left:0;right:0;top:9px;height:0;border-top:2px solid rgba(20,83,45,.7);border-radius:50%}
+.fz-bulb{flex:none;width:9px;height:9px;margin-top:9px;border-radius:50%;box-shadow:0 0 9px 3px currentColor;animation:fzBlink 1.6s ease-in-out infinite}
+/* bunting: tricolour triangles */
+.fz-tri{position:absolute;left:0;right:0;top:0;height:100%;display:flex;opacity:.92}
+.fz-tri i{flex:1;height:100%;clip-path:polygon(0 0,100% 0,50% 100%);filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+/* garba dots, rakhi threads and beads */
+.fz-dot{flex:none;width:9px;height:9px;margin-top:12px;border-radius:50%;box-shadow:0 0 8px 2px rgba(255,255,255,.35);animation:fzPulse 1.4s ease-in-out infinite}
+.fz-thread{position:absolute;left:0;top:0;width:100%;height:34px}
+.fz-bead{position:absolute;width:8px;height:8px;border-radius:50%;box-shadow:inset -2px -2px 3px rgba(0,0,0,.3),0 1px 3px rgba(0,0,0,.4)}
+/* emoji rows */
+.fz-swing{flex:none;font-size:17px;line-height:1;margin-top:2px;transform-origin:50% 0;animation:fzSwing 3.6s ease-in-out infinite;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.fz-pop{flex:none;font-size:16px;line-height:1;margin-top:4px;animation:fzBob 2s ease-in-out infinite;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+/* sale ribbon */
+.fz-ribbon{position:absolute;left:-10%;right:-10%;top:4px;height:24px;line-height:24px;text-align:center;white-space:nowrap;font:800 12px/24px system-ui,sans-serif;letter-spacing:.2em;color:#fff;background:linear-gradient(90deg,var(--fz-a),var(--fz-b1),var(--fz-a));background-size:200% 100%;animation:fzShine 3s linear infinite;transform:rotate(-2deg);box-shadow:0 4px 10px rgba(0,0,0,.3)}
+/* tune button (band, right) */
+.fz-mute{position:absolute;right:6px;top:2px;z-index:2;width:28px;height:28px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.55);background:rgba(17,12,40,.72);color:#fff;font-size:13px;line-height:26px;pointer-events:auto;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+.fz-mute:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* offer / greeting strip: fixed at the bottom, never in the page flow (no layout shift) */
+.fz-strip{position:fixed;left:10px;right:74px;bottom:calc(var(--fz-b) + env(safe-area-inset-bottom,0px));z-index:60;display:flex;gap:10px;align-items:center;max-width:460px;padding:10px 36px 10px 10px;border-radius:18px;color:#fff;background:linear-gradient(135deg,rgba(17,12,40,.95),rgba(44,18,70,.95));box-shadow:0 14px 34px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.14);animation:fzIn .5s cubic-bezier(.2,1.3,.4,1) both;pointer-events:auto}
+.fz-strip::before{content:"";position:absolute;inset:-1px;border-radius:18px;padding:1px;background:linear-gradient(120deg,var(--fz-a),var(--fz-b1),var(--fz-b2));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.fz-ic{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:21px;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.35),rgba(255,255,255,0) 55%),linear-gradient(135deg,var(--fz-a),var(--fz-b1));box-shadow:0 4px 10px rgba(0,0,0,.35)}
+.fz-tx{min-width:0;display:grid;gap:2px}
+.fz-tx b{font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.fz-tx>span{font-size:12px;line-height:1.35;opacity:.9}
+.fz-off{margin-top:4px;font-size:12px;line-height:1.35;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.fz-off strong{font-size:13px;color:#fde68a}
+.fz-code{font-family:ui-monospace,Menlo,monospace;font-weight:800;padding:2px 8px;border-radius:8px;background:#fff;color:#111;border:1px dashed var(--fz-a)}
+.fz-go{color:#fff;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+.fz-x{position:absolute;top:6px;right:6px;width:26px;height:26px;padding:0;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font-size:18px;line-height:1;cursor:pointer}
+.fz-prev{position:relative;overflow:hidden;border-radius:14px;min-height:150px;background:linear-gradient(180deg,#1e1b4b,#0f172a)}
+.fz-prev .fz-strip{position:absolute;left:8px;right:8px;bottom:8px;max-width:none}
+.fz-prev .fz-mute{display:none}
+.fz-hi .fz-dya b{box-shadow:0 0 12px 5px rgba(251,191,36,.7)}
+@keyframes fzFlick{from{transform:scale(1,.92);opacity:.9}to{transform:scale(.9,1.06);opacity:1}}
+@keyframes fzSwing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@keyframes fzGlow{0%,100%{opacity:.75;transform:scale(.95)}50%{opacity:1;transform:scale(1.05)}}
+@keyframes fzTw{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes fzBlink{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes fzPulse{0%,100%{transform:scale(.8);opacity:.6}50%{transform:scale(1.15);opacity:1}}
+@keyframes fzBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes fzShine{from{background-position:0 0}to{background-position:200% 0}}
+@keyframes fzIn{from{transform:translateY(120%);opacity:0}to{transform:none;opacity:1}}
+.fz-rm *,.fz-rm{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){.fz *{animation:none!important;transition:none!important}}
+
+/* admin look cards (static mini previews; no motion loop of their own) */
+.fs-looks{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.fs-look{all:unset;box-sizing:border-box;display:block;cursor:pointer;border-radius:14px;padding:6px;background:#fff;border:2px solid transparent;box-shadow:0 6px 16px rgba(17,12,40,.08)}
+.fs-look:focus-visible{outline:2px solid #7c3aed;outline-offset:2px}
+.fs-look.on{border-color:#7c3aed}
+.fs-mini{min-height:56px;height:56px;border-radius:10px;overflow:hidden}
+.fs-mini .fz-band{top:4px}

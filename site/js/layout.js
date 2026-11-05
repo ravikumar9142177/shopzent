@@ -172,7 +172,12 @@ export async function chrome() {
   dr.addEventListener('click', (e) => { if (e.target.closest('[data-close-drawer]') || e.target.closest('a[href]:not([data-logout])')) { dr.classList.remove('open'); dr.setAttribute('aria-hidden', 'true'); } });
   $$('[data-logout]').forEach((a) => a.addEventListener('click', async (e) => { e.preventDefault(); await api.auth.signOut(); resetProfile(); location.href = href('index.html'); }));
   updateBadges(); reveal(); initTilt();
+  festivalHook(s, page);
 }
+// Festival Studio (migration 0031/0032): the festival code loads only while a festival is on and inside its window, never on /admin/.
+function festivalHook(s, page) { try { const f = s.festival; if (!f || f.enabled !== true || location.pathname.includes('/admin/')) return;
+  const now = Date.now(), a = f.starts_at ? Date.parse(f.starts_at) : 0, b = f.ends_at ? Date.parse(f.ends_at) : Infinity; if (!(now >= a && now < b) || f.theme === 'none') return;
+  import('./festival/festival.js').then((m) => m.mountFestival(f, { noStrip: NO_TAB_BAR.includes(page) })).catch(() => {}); } catch { /* the festival never breaks a page */ } }
 export async function requireLogin() { const p = await profile(); if (!p) { const here = location.pathname.split('/').pop() || 'index.html'; location.replace(href('login.html?next=' + encodeURIComponent(here === 'checkout.html' ? 'cart.html' : here + location.search))); throw new Error('redirect'); } return p; }
 
 // Customer notification bell: unread count + the latest messages (order updates, "new update on the website" notices). Loads after the page, never blocks it.
