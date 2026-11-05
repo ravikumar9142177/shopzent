@@ -139,7 +139,7 @@ export async function chrome() {
       const G = (ic, t, inner, open) => `<div class="dg${open ? ' open' : ''}"><button type="button" class="dg-h" aria-expanded="${open ? 'true' : 'false'}"><span>${ic} ${t}</span><i aria-hidden="true">›</i></button><div class="dg-b">${inner}</div></div>`;
       const adm = p && ['admin', 'super_admin'].includes(p.role) ? `<a href="${href('admin/index.html')}">🛡️ Admin Panel</a>` : '';
       return `<a class="dg-top" href="${href('index.html')}">🏠 Home</a>`
-        + G('🛍️', 'Shop', L([['products.html', 'All Products'], ['categories.html', 'Categories'], ['trending.html', 'Trending'], ['deals.html', 'Best Deals'], ['featured.html', 'Featured'], ['brands.html', 'Brands'], ['offers.html', 'Coupons & Offers']]))
+        + G('🛍️', 'Shop', L([['products.html', 'All Products'], ['categories.html', 'Categories'], ['trending.html', 'Trending'], ['deals.html', 'Best Deals'], ['featured.html', 'Featured'], ['brands.html', 'Brands'], ['offers.html', 'Coupons & Offers'], ['game.html', '🎮 Play Game']]))
         + G('📲', 'Apps & Videos', L([['apps.html', 'Digital Apps'], ['apk.html', 'APK Downloads'], ['videos.html', 'Video Tutorials'], ['promo-videos.html', 'Promo Videos']]))
         + G('👤', 'My Account', L([['dashboard.html', 'Dashboard'], ['orders.html', 'My Orders'], ['wallet.html', 'Wallet & Coins'], ['wishlist.html', 'Wishlist'], ['returns.html', 'Returns / Refunds'], ['profile.html', 'Profile & Security']]) + adm + (p ? '<a href="#" data-logout>Log out</a>' : ''))
         + G('ℹ️', 'Help', L([['about.html', 'About Us'], ['contact.html', 'Contact Us'], ['ads.html', 'Advertisements'], ['privacy.html', 'Privacy Policy'], ['terms.html', 'Terms'], ['affiliate-disclosure.html', 'Affiliate Disclosure']])); })()}

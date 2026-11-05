@@ -1,13 +1,13 @@
 // SHOPZENT Admin Panel. Every action here is ALSO enforced by the database (RLS + admin functions that require
 // an admin role AND a 2FA-verified (aal2) session). Hiding a button is never the security boundary.
-import { api, DEMO } from '../api.js';
+import { api, DEMO, config } from '../api.js';
 import { $, $$, esc, inr, num, param, toast, modal, confirmBox, errText, fmtDate, uuid, checkFile, waLink, statusTag, statusLabel, safeUrl, slugify, sanitizeHtml } from '../util.js';
 import { href, media, IC } from '../layout.js';
 import { enrollMfa } from '../pages/account.js';
 const MOD = document.body.dataset.module;
 const NAV = [['Overview', [['dashboard', '📊', 'Dashboard'], ['sales', '💰', 'Sales / Orders amount'], ['orders', '📦', 'Orders'], ['payments', '💳', 'Payment verification'], ['returns', '↩️', 'Returns & refunds']]],
   ['Catalogue', [['products', '🛍️', 'Products'], ['content', '🗂️', 'Categories & brands'], ['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
-  ['Money & promos', [['coupons', '🎟️', 'Coupons'], ['wallet', '👛', 'Customer wallets'], ['coins', '🪙', 'Coins'], ['cointransfers', '🔁', 'Coin transfer requests'], ['referrals', '🔗', 'Share rewards']]],
+   ['Money & promos', [['coupons', '🎟️', 'Coupons'], ['wallet', '👛', 'Customer wallets'], ['coins', '🪙', 'Coins'], ['cointransfers', '🔁', 'Coin transfer requests'], ['referrals', '🔗', 'Share rewards'], ['game-winners', '🏆', 'Game winners']]],
   ['Site & people', [['settings', '⚙️', 'Website settings'], ['domain', '🌐', 'Domain'], ['users', '👥', 'Users'], ['emailcheck', '📧', 'Email check'], ['reviews', '⭐', 'Reviews'], ['messages', '✉️', 'Messages'], ['security', '🛡️', 'Security & audit'], ['alerts', '🚨', 'Hacker alerts']]]];
 let ME = null, FACTOR = null;
 const DEMO_ADMIN_EMAIL = String(window.SHOPZENT_CONFIG?.DEMO_ADMIN?.email || '').trim().toLowerCase(); // preview mode: the only admin email accepted
@@ -55,6 +55,7 @@ function shell() {
   $('#lo').onclick = async (e) => { e.preventDefault(); await api.auth.signOut(); location.href = 'index.html'; };
   api.rpc('admin_site_status').then((s) => { const p = $('#site-pill'); if (!p) return; p.style.display = ''; p.className = 'tag ' + (s.published ? 'green' : 'red'); p.textContent = s.published ? '● LIVE' : '● CLOSED'; }).catch(() => {});
   api.rpc('admin_security_alert_counts').then((c) => { const a = document.querySelector('.adm-side a[href="alerts.html"]'); if (a && c.new_total) a.insertAdjacentHTML('beforeend', `<span class="tag ${c.new_high ? 'red' : 'pink'}" style="margin-left:auto">${c.new_total}</span>`); }).catch(() => {});
+  api.rpc('admin_game_pending_count').then((n) => { const a = document.querySelector('.adm-side a[href="game-winners.html"]'); if (a && n) a.insertAdjacentHTML('beforeend', `<span class="tag pink" style="margin-left:auto">${n}</span>`); }).catch(() => {});
   api.rpc('admin_notifications').then((n) => { const u = n.filter((x) => !x.read_at).length; $('#nb').textContent = u || ''; $('#nb').dataset.n = u; }).catch(() => {});
   api.rpc('admin_coin_transfer_pending_count').then((n) => { const a = document.querySelector('.adm-side a[href="cointransfers.html"]'); if (a && Number(n) > 0) a.insertAdjacentHTML('beforeend', `<span class="tag pink" style="margin-left:auto">${Number(n)}</span>`); }).catch(() => {});
 }
@@ -540,6 +541,106 @@ const KIND = { login_locked: 'Login locked: too many wrong passwords', login_loc
   mfa_failure: 'Wrong 2-step code', disposable_signup: 'Fake / temporary email signup', duplicate_utr: 'Used payment reference (UTR) again', bulk_orders: 'Many orders in a short time',
   frame_bust: 'Site shown inside another website', injection_payload: 'Script / SQL-looking text', admin_ui_denied: 'Customer opened the admin panel' };
 const SEV = { low: ['gray', '#9CA3AF'], medium: ['orange', '#F97316'], high: ['red', '#EF4444'], critical: ['dark', '#7F1D1D'] };
+// ----- Tap Rush (migration 0027): weekly target + prizes, winners' photo and name approval -----
+const gwCompress = async (file) => {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const sc = Math.min(1, 300 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * sc)); c.height = Math.max(1, Math.round(img.naturalHeight * sc));
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+    for (const q of [0.85, 0.75, 0.65, 0.55, 0.45]) { const b = await new Promise((r) => c.toBlob(r, 'image/jpeg', q)); if (b && b.size <= 300 * 1024) return b; }
+    throw new Error('Photo bahut badi hai, dusri photo lo.');
+  } finally { URL.revokeObjectURL(url); }
+};
+const gwPublic = async (file) => (await api.upload('public-media', new File([await gwCompress(file)], 'photo.jpg', { type: 'image/jpeg' }), 'settings/game-winners')).path;
+M['game-winners'] = async () => {
+  main().innerHTML = head('Game winners (Tap Rush)') + `<div class="alert small">Tap Rush: har hafte pehle 3 alag accounts jo <b>target score</b> tak pahunchein, unhe 1st/2nd/3rd prize coins milte hain (coins points hain, cash nahi). Winner ki photo aur naam <b>aap approve karoge</b>; tabhi game ke neeche dikhenge. Har action audit me jaata hai.</div>
+  <div class="card pad" style="margin-bottom:14px"><h3 style="margin-top:0">Game settings</h3><div id="gw-set" class="row" style="gap:10px;flex-wrap:wrap">Loading…</div></div>
+  <div class="card pad"><div class="row between" style="flex-wrap:wrap;gap:8px"><h3 style="margin:0">Winners</h3><span class="small muted" id="gw-tot"></span></div><div id="gw-list" style="margin-top:10px">Loading…</div></div>`;
+  let st = {}; try { const row = await api.select('site_settings', { eq: { key: 'game_weekly' }, single: true }); st = row?.value || {}; } catch {}
+  const pr = Array.isArray(st.prizes) ? st.prizes : [30, 20, 10];
+  $('#gw-set').innerHTML = `<label class="small row" style="gap:6px"><input type="checkbox" id="gw-en" ${st.enabled !== false ? 'checked' : ''}> Game on</label>
+    <label class="small">Target score <input id="gw-t" type="number" min="100" max="1000000" value="${esc(st.target_score || 3600)}" style="width:110px"></label>
+    <label class="small">1st <input id="gw-p1" type="number" min="0" max="30" value="${esc(pr[0])}" style="width:70px"></label>
+    <label class="small">2nd <input id="gw-p2" type="number" min="0" max="30" value="${esc(pr[1])}" style="width:70px"></label>
+    <label class="small">3rd <input id="gw-p3" type="number" min="0" max="30" value="${esc(pr[2])}" style="width:70px"></label>
+    <button class="btn sm" id="gw-save">Save settings</button><span class="tiny muted" style="width:100%">Prize har place ke liye 0–30, teeno ka total 60 se zyada nahi. Target 3600 default hai: simulated player (97% hits, ~215 ms reaction) reaches it ~1 in 5 runs, 90% hits almost never. Simulation, not real player data; admin badal sakta hai.</span>`;
+  $('#gw-save').onclick = async () => {
+    try { await call('admin_set_game_settings', { p_enabled: $('#gw-en').checked, p_target: Number($('#gw-t').value), p_prizes: [Number($('#gw-p1').value), Number($('#gw-p2').value), Number($('#gw-p3').value)] }); ok('Game settings saved ✓'); }
+    catch (x) { bad(x); }
+  };
+  const load = async () => {
+    let d; try { d = await call('admin_game_winners_list', { p_weeks: 8 }); } catch (x) { return bad(x); }
+    $('#gw-tot').textContent = `Pending: ${d.pending || 0} · this week ${d.week_key || ''}`;
+    const rows = d.rows || [];
+    if (!rows.length) { $('#gw-list').innerHTML = '<p class="small muted">Abhi koi winner nahi.</p>'; return; }
+    $('#gw-list').innerHTML = rows.map((r) => `<div class="card pad" style="box-shadow:none;border:1px solid var(--line);margin-bottom:10px" data-id="${esc(r.id)}">
+      <div class="row between" style="flex-wrap:wrap;gap:6px"><b class="small">${esc(r.week_key)} · #${esc(r.place)} · ${esc(r.customer_id || '')}</b>
+        <span class="tag ${r.submit_status === 'approved' ? 'green' : r.submit_status === 'rejected' ? 'red' : r.submit_status === 'pending' ? 'pink' : 'orange'}">${esc(r.submit_status)}</span></div>
+      <div class="tiny muted">${esc(r.full_name || '—')} · score ${num(r.score)} · ${num(r.coins)} coins · won ${fmtDate(r.won_at)}</div>
+      ${r.submit_status === 'rejected' ? `<div class="tiny muted">Reject reason: ${esc(r.reject_reason || '')}</div>` : ''}
+      <div class="row" style="gap:12px;align-items:flex-start;margin-top:8px;flex-wrap:wrap">
+        <div data-prev style="width:120px;height:120px;border-radius:12px;background:#f3f4f6;display:grid;place-items:center;overflow:hidden"><span class="tiny muted">${r.submit_status === 'none' ? 'no photo' : 'loading…'}</span></div>
+        <div style="flex:1;min-width:220px;display:grid;gap:8px">
+          <label class="small">Display name (2–30, bina link ke)<input data-name value="${esc(r.submit_status === 'approved' ? r.name_approved || '' : r.name_submitted || '')}" maxlength="30"></label>
+          ${r.submit_status === 'pending' ? `<div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-ap>Approve</button><button class="btn danger sm" data-rj>Reject</button></div>` : ''}
+          ${r.submit_status === 'approved' ? `<label class="small">Replace photo (optional)<input type="file" accept="image/*" data-file></label><div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-save>Save name / photo</button><button class="btn danger sm" data-rj>Remove from game</button></div>` : ''}
+        </div></div></div>`).join('');
+    // previews: pending photo from the private bucket (signed link), approved photo from the public bucket
+    for (const r of rows) {
+      const box = document.querySelector(`#gw-list [data-id="${CSS.escape(String(r.id))}"] [data-prev]`); if (!box) continue;
+      try {
+        if (r.submit_status === 'pending' && r.photo_pending_path) { const u = await api.signedUrl('game-photos', r.photo_pending_path, 600); box.innerHTML = `<img src="${esc(u)}" alt="" style="width:100%;height:100%;object-fit:cover">`; }
+        else if (r.submit_status === 'approved' && r.photo_public_path) { const base = String(config.SUPABASE_URL || '').replace(/\/+$/, ''); box.innerHTML = `<img src="${esc(base + '/storage/v1/object/public/public-media/' + r.photo_public_path.split('/').map(encodeURIComponent).join('/'))}" alt="" style="width:100%;height:100%;object-fit:cover">`; }
+        else box.innerHTML = '<span class="tiny muted">no photo</span>';
+      } catch { box.innerHTML = '<span class="tiny muted">photo not loading</span>'; }
+    }
+  };
+  $('#gw-list').addEventListener('click', async (e) => {
+    const card = e.target.closest('[data-id]'); if (!card) return;
+    const b = e.target.closest('button'); if (!b) return;
+    const id = Number(card.dataset.id), name = card.querySelector('[data-name]').value.trim();
+    if (b.matches('[data-ap],[data-save]')) {
+      const fileIn = card.querySelector('[data-file]'); const file = fileIn && fileIn.files[0];
+      const pend = b.matches('[data-ap]');
+      const c = await confirmBox(pend ? 'Approve this photo and name?' : 'Save this name / photo?', pend ? 'Ye photo aur naam game ke neeche live ho jayega.' : 'Game ke neeche ye naam aur photo dikhegi.', { ok: pend ? 'Approve' : 'Save' });
+      if (!c) return;
+      try {
+        b.disabled = true;
+        const rowsNow = await call('admin_game_winners_list', { p_weeks: 8 });
+        const cur = (rowsNow.rows || []).find((x) => x.id === id);
+        if (!cur) throw new Error('not_found');
+        let publicPath = cur.photo_public_path || null;
+        let copiedPending = false;
+        if (file) publicPath = await gwPublic(file);
+        else if (cur.submit_status === 'pending' && cur.photo_pending_path) {
+          const u = await api.signedUrl('game-photos', cur.photo_pending_path, 300);
+          const blob = await (await fetch(u)).blob();
+          publicPath = await gwPublic(new File([blob], 'pending.jpg', { type: blob.type || 'image/jpeg' }));
+          copiedPending = true;
+        }
+        const old = cur.photo_public_path;
+        await call('admin_game_approve', { p_win_id: id, p_name: name, p_public_path: publicPath });
+        if (copiedPending) await api.removeFile('game-photos', cur.photo_pending_path).catch(() => {});
+        if (old && old !== publicPath) await api.removeFile('public-media', old).catch(() => {});
+        ok('Saved ✓'); await load();
+      } catch (x) { bad(x); b.disabled = false; }
+    }
+    if (b.matches('[data-rj]')) {
+      const removing = /Remove/.test(b.textContent);
+      const reason = await confirmBox(removing ? 'Remove from the game?' : 'Reject this submission?', 'Winner ko ye reason dikhega. Photo aur naam game se hat jayenge.', { ok: removing ? 'Remove' : 'Reject', danger: true, input: 'Reason (3+ characters)' });
+      if (!reason || String(reason).trim().length < 3) return;
+      try {
+        const out = await call('admin_game_reject', { p_win_id: id, p_reason: String(reason).trim() });
+        if (out.delete_pending) await api.removeFile('game-photos', out.delete_pending).catch(() => {});
+        if (out.delete_public) await api.removeFile('public-media', out.delete_public).catch(() => {});
+        ok('Done ✓'); await load();
+      } catch (x) { bad(x); }
+    }
+  });
+  await load();
+};
 M.alerts = async () => {
   const F = { severity: '', status: '', from: '', to: '', ip: '' };
   main().innerHTML = head('Hacker alerts', '<button class="btn sec sm" id="al-blocked">🚫 Blocked IPs</button><button class="btn sec sm" id="al-ackall">✔ Acknowledge all</button>') + `
