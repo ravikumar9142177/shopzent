@@ -116,3 +116,14 @@
 .hero-blob.b3{background:linear-gradient(135deg,rgba(249,115,22,.45),rgba(236,72,153,.08))}
 .hero-blob.b4{background:#fff;opacity:.9}
 .offer-dots i{background:rgba(124,58,237,.25)}.offer-dots i.on{background:#7C3AED}.offer-track{padding-bottom:20px}
+
+/* Drawer: 5 sections, tap one to open its list */
+.drawer .dg-top{display:flex;align-items:center;padding:14px 16px;margin:4px 0;border-radius:16px;font-weight:700;color:var(--ink);background:linear-gradient(180deg,#fff,#F6F1FF);box-shadow:0 2px 0 #E4D9FB}
+.drawer .dg{margin:8px 0;border-radius:16px;background:linear-gradient(180deg,#fff,#F6F1FF);box-shadow:0 2px 0 #E4D9FB;overflow:hidden}
+.drawer .dg-h{display:flex;width:100%;align-items:center;justify-content:space-between;padding:14px 16px;border:0;background:none;font:700 1rem Poppins,sans-serif;color:var(--ink);cursor:pointer}
+.drawer .dg-h i{font-style:normal;font-size:1.5rem;line-height:1;transition:transform .25s;color:var(--purple)}
+.drawer .dg.open .dg-h i{transform:rotate(90deg)}
+.drawer .dg-b{display:none;padding:0 8px 10px}
+.drawer .dg.open .dg-b{display:block}
+.drawer .dg-b a{display:block;padding:10px 12px;border-radius:12px;font-weight:600;font-size:.92rem}
+.drawer .dg-b a:active{background:rgba(124,58,237,.1)}

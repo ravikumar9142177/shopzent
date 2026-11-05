@@ -135,11 +135,15 @@ export async function chrome() {
   <div class="drawer" id="drawer" aria-hidden="true"><div class="shade" data-close-drawer></div><div class="panel" role="dialog" aria-label="Menu">
     <div class="logo-c" style="margin:0 0 10px"><img src="${href('assets/logo-lockup.png')}" alt="SHOPZENT" style="height:34px"></div>
     ${p ? `<div class="alert" style="margin:6px 4px 10px">Hi <b>${esc(p.full_name || 'there')}</b> · <code>${esc(p.customer_id || '')}</code></div>` : `<div class="row" style="margin:8px 4px 12px"><a class="btn sm" href="${href('login.html')}" style="color:#fff">Log in</a><a class="btn sm sec" href="${href('register.html')}">Sign up</a></div>`}
-    <h4>Shop</h4>${NAV.map(([h, l]) => `<a href="${href(h)}">${l}</a>`).join('')}
-    <h4>My account</h4>${[['dashboard.html', 'Dashboard'], ['orders.html', 'My Orders'], ['wallet.html', 'Wallet & Coins'], ['wishlist.html', 'Wishlist'], ['returns.html', 'Returns / Refunds'], ['profile.html', 'Profile & Security']].map(([h, l]) => `<a href="${href(h)}">${l}</a>`).join('')}
-    <h4>Help</h4>${[['about.html', 'About Us'], ['contact.html', 'Contact Us'], ['ads.html', 'Advertisements'], ['privacy.html', 'Privacy Policy'], ['terms.html', 'Terms'], ['affiliate-disclosure.html', 'Affiliate Disclosure']].map(([h, l]) => `<a href="${href(h)}">${l}</a>`).join('')}
-    ${p && ['admin', 'super_admin'].includes(p.role) ? `<h4>Admin</h4><a href="${href('admin/index.html')}">🛡️ Admin Panel</a>` : ''}
-    ${p ? `<a href="#" data-logout>Log out</a>` : ''}</div></div>`;
+    ${(() => { const L = (arr) => arr.map(([h, l]) => `<a href="${href(h)}">${l}</a>`).join('');
+      const G = (ic, t, inner, open) => `<div class="dg${open ? ' open' : ''}"><button type="button" class="dg-h" aria-expanded="${open ? 'true' : 'false'}"><span>${ic} ${t}</span><i aria-hidden="true">›</i></button><div class="dg-b">${inner}</div></div>`;
+      const adm = p && ['admin', 'super_admin'].includes(p.role) ? `<a href="${href('admin/index.html')}">🛡️ Admin Panel</a>` : '';
+      return `<a class="dg-top" href="${href('index.html')}">🏠 Home</a>`
+        + G('🛍️', 'Shop', L([['products.html', 'All Products'], ['categories.html', 'Categories'], ['trending.html', 'Trending'], ['deals.html', 'Best Deals'], ['featured.html', 'Featured'], ['brands.html', 'Brands'], ['offers.html', 'Coupons & Offers']]))
+        + G('📲', 'Apps & Videos', L([['apps.html', 'Digital Apps'], ['apk.html', 'APK Downloads'], ['videos.html', 'Video Tutorials'], ['promo-videos.html', 'Promo Videos']]))
+        + G('👤', 'My Account', L([['dashboard.html', 'Dashboard'], ['orders.html', 'My Orders'], ['wallet.html', 'Wallet & Coins'], ['wishlist.html', 'Wishlist'], ['returns.html', 'Returns / Refunds'], ['profile.html', 'Profile & Security']]) + adm + (p ? '<a href="#" data-logout>Log out</a>' : ''))
+        + G('ℹ️', 'Help', L([['about.html', 'About Us'], ['contact.html', 'Contact Us'], ['ads.html', 'Advertisements'], ['privacy.html', 'Privacy Policy'], ['terms.html', 'Terms'], ['affiliate-disclosure.html', 'Affiliate Disclosure']])); })()}
+    </div></div>`;
   document.body.prepend(top);
   if (p && !DEMO) initBell();
   const year = new Date().getFullYear(); const so = s.social || {};
@@ -163,6 +167,7 @@ export async function chrome() {
     document.body.appendChild(bn); document.body.classList.add('has-bnav');
   }
   if (page !== 'payment' && page !== 'payment-submit') { const wa = document.createElement('a'); wa.className = 'wa-float'; wa.href = waLink(c.whatsapp, 'Hi SHOPZENT, I need help'); wa.target = '_blank'; wa.rel = 'noopener'; wa.setAttribute('aria-label', 'Chat on WhatsApp'); wa.innerHTML = IC.wa; document.body.appendChild(wa); }
+  document.querySelectorAll('#drawer .dg-h').forEach((b) => b.addEventListener('click', () => { const g = b.parentElement, was = g.classList.contains('open'); document.querySelectorAll('#drawer .dg.open').forEach((x) => { x.classList.remove('open'); x.firstElementChild.setAttribute('aria-expanded', 'false'); }); if (!was) { g.classList.add('open'); b.setAttribute('aria-expanded', 'true'); } }));
   const dr = $('#drawer'); $('#menu-btn')?.addEventListener('click', () => { dr.classList.add('open'); dr.setAttribute('aria-hidden', 'false'); });
   dr.addEventListener('click', (e) => { if (e.target.closest('[data-close-drawer]') || e.target.closest('a[href]:not([data-logout])')) { dr.classList.remove('open'); dr.setAttribute('aria-hidden', 'true'); } });
   $$('[data-logout]').forEach((a) => a.addEventListener('click', async (e) => { e.preventDefault(); await api.auth.signOut(); resetProfile(); location.href = href('index.html'); }));
