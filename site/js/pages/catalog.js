@@ -13,6 +13,12 @@ export async function home() {
     <span class="tag" style="background:rgba(255,255,255,.2);color:#fff">✨ India's colourful shopping hub</span>
     <h1>${esc(h.hero_title || 'Discover More. Shop Smarter.')}</h1><p class="lead">${esc(h.hero_subtitle || '')}</p>
     <form class="search" action="products.html" role="search"><input name="q" type="search" placeholder="Search earbuds, kurtas, chargers…" aria-label="Search" maxlength="80"><button aria-label="Search">${IC.search.replace('<svg', '<svg width="18" height="18"')}</button></form>
+    <div class="offer-slider" aria-label="Offers"><div class="offer-track" id="offer-track">
+      <a class="offer" href="deals.html" style="--c1:#F97316;--c2:#EC4899;--c3:#B4380F"><b>Best Deals</b><span class="s">Handpicked offers, checked by our team</span><span class="go">Shop deals →</span><span class="big" aria-hidden="true">💸</span></a>
+      <a class="offer" href="trending.html" style="--c1:#7C3AED;--c2:#06B6D4;--c3:#4C1D95"><b>Trending Now</b><span class="s">What shoppers love this week</span><span class="go">See trending →</span><span class="big" aria-hidden="true">🔥</span></a>
+      <a class="offer" href="offers.html" style="--c1:#EC4899;--c2:#A855F7;--c3:#86198F"><b>Coupons &amp; Offers</b><span class="s">Save more on every order</span><span class="go">Get coupons →</span><span class="big" aria-hidden="true">🎟️</span></a>
+      <a class="offer" href="wallet.html" style="--c1:#0EA5E9;--c2:#7C3AED;--c3:#1E3A8A"><b>Share &amp; Earn Coins</b><span class="s">Share our products, earn coins after delivery</span><span class="go">My wallet →</span><span class="big" aria-hidden="true">🪙</span></a>
+    </div><div class="offer-dots" id="offer-dots"><i class="on"></i><i></i><i></i><i></i></div></div>
     <div class="chips"><a href="trending.html">🔥 Trending</a><a href="deals.html">💸 Best deals</a><a href="offers.html">🎟️ Coupons</a><a href="apps.html">📲 Apps</a></div>
     <div class="stats"><div><b>Amazon + Flipkart</b><span>handpicked affiliate deals</span></div><div><b>UPI</b><span>simple, verified payments</span></div><div><b>2FA</b><span>secured admin & accounts</span></div></div></div>
     <div class="hero-art" aria-hidden="true"><div class="float-card"><picture><source srcset="assets/banners/categories-suraj.webp" type="image/webp"><img src="assets/banners/categories-suraj.jpg" alt="" style="border-radius:14px" width="1080" height="691"></picture></div></div>
@@ -42,6 +48,11 @@ export async function home() {
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="card pad row between"><div><h3 style="margin:0">Need help?</h3><p class="muted small" style="margin:0">WhatsApp +91 ${esc(s.contact.whatsapp)} · ${esc(s.contact.email)}</p></div><div class="row"><a class="btn wa sm" target="_blank" rel="noopener" href="${waLink(s.contact.whatsapp, 'Hi SHOPZENT')}">${IC.wa.replace('<svg', '<svg width="18" height="18"')} WhatsApp</a><a class="btn sec sm" href="mailto:${esc(s.contact.email)}">Email us</a></div></div></div></section>`;
   reveal();
   const cats = await categories();
+  { const tr = $('#offer-track'), dots = [...document.querySelectorAll('#offer-dots i')]; if (tr && dots.length) { let i = 0, hold = false;
+    const go = (n) => { const c = tr.children[n]; if (c) tr.scrollTo({ left: c.offsetLeft - tr.offsetLeft - (tr.clientWidth - c.clientWidth) / 2, behavior: 'smooth' }); };
+    tr.addEventListener('scroll', () => { const k = Math.round(tr.scrollLeft / Math.max(1, tr.scrollWidth / tr.children.length)); dots.forEach((d, j) => d.classList.toggle('on', j === Math.min(k, dots.length - 1))); i = k; }, { passive: true });
+    ['touchstart', 'pointerdown'].forEach((e) => tr.addEventListener(e, () => { hold = true; }, { passive: true })); tr.addEventListener('touchend', () => { setTimeout(() => { hold = false; }, 4000); }, { passive: true });
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(() => { if (hold || document.hidden) return; i = (i + 1) % dots.length; go(i); }, 4000); } }
   $('#h-cats').innerHTML = cats.map((c) => `<a class="cat" href="products.html?category=${encodeURIComponent(c.slug)}"><span class="ic" aria-hidden="true">${/^https?:|\//.test(c.icon || '') ? `<img loading="lazy" decoding="async" src="${esc(media(c.icon))}" alt="">` : esc(c.icon || '🛍️')}</span>${esc(c.name)}</a>`).join('') || '<p class="muted">Categories will appear here.</p>';
   $('#h-coll').innerHTML = cats.slice(0, 3).map((c) => `<a class="banner-card" href="products.html?category=${encodeURIComponent(c.slug)}"><img loading="lazy" src="${esc(media(c.banner_url) || 'assets/banners/promo.svg')}" alt="${esc(c.name)} collection"></a>`).join('');
   const all = await api.select('products', { ...PUB, order: { col: 'created_at', asc: false }, limit: 60 });
