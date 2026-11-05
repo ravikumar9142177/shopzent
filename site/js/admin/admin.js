@@ -8,7 +8,7 @@ const MOD = document.body.dataset.module;
 const NAV = [['Dashboard & orders', [['dashboard', '📊', 'Dashboard'], ['sales', '💰', 'Sales / Orders amount'], ['orders', '📦', 'Orders'], ['returns', '↩️', 'Returns & refunds']]],
   ['Shop', [['products', '🛍️', 'Products'], ['content', '🗂️', 'Categories & brands']]],
   ['Money & coins', [['payments', '💳', 'Payment verification'], ['coupons', '🎟️', 'Coupons'], ['wallet', '👛', 'Customer wallets'], ['coins', '🪙', 'Coins'], ['cointransfers', '🔁', 'Coin transfer requests'], ['referrals', '🔗', 'Share rewards'], ['game-winners', '🏆', 'Game winners']]],
-  ['Content', [['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
+  ['Content', [['festival', '🪔', 'Festival Studio'], ['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
   ['Settings & security', [['settings', '⚙️', 'Website settings'], ['domain', '🌐', 'Domain'], ['users', '👥', 'Users'], ['emailcheck', '📧', 'Email check'], ['reviews', '⭐', 'Reviews'], ['messages', '✉️', 'Messages'], ['security', '🛡️', 'Security & audit'], ['alerts', '🚨', 'Hacker alerts']]]];
 let ME = null, FACTOR = null;
 const DEMO_ADMIN_EMAIL = String(window.SHOPZENT_CONFIG?.DEMO_ADMIN?.email || '').trim().toLowerCase(); // preview mode: the only admin email accepted
@@ -47,7 +47,7 @@ export async function loginPage() {
 function shell() {
   document.body.classList.add('admin');
   document.body.innerHTML = `${DEMO ? '<div class="demo-bar">👀 <b>Preview mode</b> — admin panel running on demo data in this browser only.</div>' : ''}<div class="adm"><aside class="adm-side" id="side"><a href="dashboard.html" style="padding:6px 8px 12px"><img src="../assets/logo-lockup.png" alt="SHOPZENT" style="height:36px"></a>
-    ${NAV.map(([g, items], gi) => `<div class="adm-ag${items.some(([k]) => k === MOD) ? ' open' : ''}"><button type="button" class="adm-ag-h" data-ag="${gi}" aria-expanded="${items.some(([k]) => k === MOD) ? 'true' : 'false'}"><span>${g}</span><i aria-hidden="true">›</i></button><div class="adm-ag-b">${items.map(([k, i, l]) => `<a href="${k}.html" class="${k === MOD ? 'active' : ''}"><span aria-hidden="true">${i}</span>${l}</a>`).join('')}</div></div>`).join('')}
+    ${NAV.flatMap((n) => n[1]).map(([k, i, l]) => `<a href="${k}.html" class="${k === MOD ? 'active' : ''}"><span aria-hidden="true">${i}</span>${l}</a>`).join('')}
     <h5>Account</h5><a href="../index.html" target="_blank">🌐 View website</a><a href="../profile.html#security">🔐 My 2FA & recovery codes</a><a href="#" id="lo">🚪 Log out</a></aside><div class="shade-adm" id="shade"></div>
     <div><div class="adm-top"><button class="icon-btn" id="sb" style="display:grid" aria-label="Menu">${IC.menu}</button><b class="grow">${esc(NAV.flatMap((n) => n[1]).find((x) => x[0] === MOD)?.[2] || 'Admin')}</b><a class="tag" id="site-pill" href="dashboard.html" style="display:none"></a><a class="icon-btn" href="dashboard.html#notifications" aria-label="Notifications">${IC.bell}<span class="badge" id="nb"></span></a><span class="tag ${ME.role === 'super_admin' ? 'pink' : ''}">${esc(ME.role.replace('_', ' '))}</span></div>
     <main class="adm-main" id="adm-main"><div class="sk" style="height:200px"></div></main></div></div>`;
