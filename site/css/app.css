@@ -49,3 +49,14 @@
   .pcard,.cat,.pcard:hover,.cat:hover{transform:none!important;transition:none!important}
   .pcard .img img{transition:none!important}
 }
+
+/* ---- advertisements: 3D card look (CSS only; off with reduced motion) ---- */
+@keyframes szAdIn{from{opacity:0;transform:perspective(900px) rotateX(14deg) translateY(12px)}to{opacity:1;transform:none}}
+.ad-slot{perspective:900px;transform-style:preserve-3d;animation:szAdIn .6s ease both;transition:transform .35s ease,box-shadow .35s ease;will-change:transform}
+.ad-slot img{transition:transform .35s ease}
+.ad-slot::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.22) 50%,transparent 70%);transform:translateX(-100%);transition:transform .8s ease}
+.ad-slot:hover{transform:rotateX(4deg) rotateY(-6deg) translateY(-3px);box-shadow:0 24px 40px -18px rgba(76,29,149,.45)}
+.ad-slot:hover img{transform:scale(1.03)}
+.ad-slot:hover::after{transform:translateX(100%)}
+.ad-slot:active{transform:scale(.985)}
+@media (prefers-reduced-motion: reduce){.ad-slot,.ad-slot img,.ad-slot::after{animation:none;transition:none;transform:none!important}}
