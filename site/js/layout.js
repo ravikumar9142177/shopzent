@@ -38,7 +38,7 @@ export const cart = {
   count() { return cart.get().reduce((a, x) => a + x.qty, 0); },
 };
 let _settings = null, _profile, _wish = null, _cats = null, _brands = null;
-export async function settings() { if (_settings) return _settings; try { const rows = await api.select('site_settings'); _settings = Object.fromEntries(rows.map((r) => [r.key, r.value || {}])); } catch { _settings = {}; }
+export async function settings() { if (_settings) return _settings; try { const c = JSON.parse(sessionStorage.getItem('sz.settings') || 'null'); if (c && Date.now() - c.t < 120000 && !location.pathname.includes('/admin/')) { _settings = c.v; } } catch {} if (!_settings) try { const rows = await api.select('site_settings'); _settings = Object.fromEntries(rows.map((r) => [r.key, r.value || {}])); try { sessionStorage.setItem('sz.settings', JSON.stringify({ t: Date.now(), v: _settings })); } catch {} } catch { _settings = {}; }
   _settings.contact = { whatsapp: config.WHATSAPP_FALLBACK, email: config.EMAIL_FALLBACK, ..._settings.contact }; return _settings; }
 export async function profile() { if (_profile !== undefined) return _profile; try { _profile = await api.auth.profile(); } catch { _profile = null; } return _profile; }
 export function resetProfile() { _profile = undefined; }
