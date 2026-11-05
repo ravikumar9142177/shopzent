@@ -21,7 +21,7 @@ export async function home() {
     </div>
     <div class="hero-art" aria-hidden="true"><div class="float-card"><picture><source srcset="assets/banners/categories-suraj.webp" type="image/webp"><img src="assets/banners/categories-suraj.jpg" alt="" style="border-radius:14px" width="1080" height="691"></picture></div></div>
   </div></section>
-  <section class="sec reveal" style="padding-top:0"><div class="container"><a href="game.html" style="display:flex;align-items:center;gap:14px;text-decoration:none;color:#fff;border-radius:20px;padding:16px 18px;background:linear-gradient(135deg,#1e1038,#0b1830 60%,#3b0764);box-shadow:0 12px 30px rgba(124,58,237,.35)"><span aria-hidden="true" style="font-size:34px">🎮</span><span style="flex:1"><b style="display:block;font-size:17px">Tap Rush: is hafte ke 3 winners ko coins</b><span style="opacity:.85;font-size:14px">Neon tap game. Target tak pahuncho, 30 / 20 / 10 coins jeeto.</span></span><span style="font-weight:800;color:#fde047">Play →</span></a></div></section>
+  <section class="sec reveal" style="padding-top:0"><div class="container"><a href="games.html" class="games-card"><span class="gc-ic" aria-hidden="true">🎮</span><span class="gc-tx"><b>Games</b><span>Free games khelo, aur Tap Rush me is hafte ke 3 winners ko coins</span></span><span class="gc-go">Play →</span></a></div></section>
   <section class="sec reveal"><div class="container"><div class="sec-h"><div><span class="eyebrow">Shop by category</span><h2>Categories</h2></div><a href="categories.html">View all →</a></div><div class="cats" id="h-cats">${'<div class="sk" style="height:110px"></div>'.repeat(6)}</div></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><a class="promo-wide" href="categories.html" aria-label="Discover your next favourite — browse categories"><picture><source srcset="assets/banners/categories-suraj.webp" type="image/webp"><img loading="lazy" src="assets/banners/categories-suraj.jpg" alt="Discover your next favourite — Electronics, Home goods, Fashion, Beauty, Lifestyle, Accessories" width="1080" height="691"></picture></a></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Hot right now</span><h2>Trending products</h2></div><a href="trending.html">See all →</a></div><div class="scroller" id="h-trending">${skeletonCards(4)}</div></div></section>
@@ -62,11 +62,21 @@ export async function home() {
   await renderProducts($('#h-popular'), all.filter((p) => p.is_popular).concat(all.filter((p) => !p.is_popular).sort((a, b) => b.view_count - a.view_count)).slice(0, 8));
   await renderProducts($('#h-latest'), all.slice(0, 8));
   $('#h-coupons').innerHTML = couponHint();
+  featuredCoupon().then((html) => { if (!html) return; $('#h-coupons').innerHTML = html; const cb = $('#h-coupons [data-copy]'); if (cb) cb.onclick = () => navigator.clipboard?.writeText(cb.dataset.copy).then(() => toast('Copied ✓', 'ok')); });
   const br = await brands(); $('#h-brands').innerHTML = br.slice(0, 12).map((b) => `<a class="brand-tile" href="products.html?brand=${encodeURIComponent(b.slug)}">${b.logo_url ? `<img loading="lazy" decoding="async" src="${esc(media(b.logo_url))}" alt="${esc(b.name)}" style="max-height:44px">` : esc(b.name)}</a>`).join('');
   const vids = await api.select('videos', { ...PUB, order: { col: 'sort', asc: true }, limit: 4 }); $('#h-videos').innerHTML = vids.map(videoCard).join('') || '<p class="muted">Videos coming soon.</p>';
   const apps = await api.select('apps', { ...PUB, order: { col: 'updated_at', asc: false }, limit: 3 }); $('#h-apps').innerHTML = apps.map(appCard).join('') || '<p class="muted">Apps coming soon.</p>';
   adSlot($('#h-ad-mid'), 'home_mid');
   $('#nl').addEventListener('submit', async (e) => { e.preventDefault(); const em = e.target.email.value.trim(); try { await api.rpc('subscribe_newsletter', { p_email: em }); $('#nl-msg').textContent = 'Thanks! You are subscribed ✓'; e.target.reset(); } catch { $('#nl-msg').textContent = 'Please enter a valid email.'; } });
+}
+// Aaj ka coupon: the one PUBLIC coupon inside its show window (server decides; private codes never come here)
+async function featuredCoupon() {
+  const f = await api.rpc('featured_coupon').catch(() => null);
+  if (!f || !f.code) return '';
+  const off = f.discount_type === 'percent' ? `${Number(f.discount_value)}% off` : `₹${Number(f.discount_value)} off`;
+  const min = Number(f.min_order) > 0 ? ` · min order ₹${Number(f.min_order)}` : '';
+  const until = f.show_until ? ` · ${new Date(f.show_until).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} tak` : '';
+  return `<div class="coupon feat-coupon"><div class="pct">🎟️<small>AAJ KA</small></div><div><div style="font-weight:700">Aaj ka coupon: <code class="fc-code">${esc(f.code)}</code></div><div class="small" style="opacity:.92">${esc(off + min + until)}</div></div><button class="cbtn" type="button" data-copy="${esc(f.code)}">Copy</button></div>`;
 }
 export const couponHint = () => `<div class="coupon"><div class="pct">🎟️<small>CODE</small></div><div><div style="font-weight:700">Have a coupon code?</div><div class="small" style="opacity:.92">Apply it at checkout — your discount is checked and calculated securely.</div></div><a class="cbtn" href="offers.html">How it works</a></div>`;
 export const videoCard = (v) => `<article class="vcard"><a class="th" href="#" data-video="${esc(v.id)}" aria-label="Play ${esc(v.title)}"><img loading="lazy" src="${esc(media(v.thumbnail_url) || 'assets/banners/promo.svg')}" alt=""><span class="play"><span>${IC.play}</span></span></a><div class="b"><span class="tag ${v.kind === 'promo' ? 'pink' : 'cyan'}">${v.kind === 'promo' ? 'Promo' : 'Tutorial'}</span><h3 style="margin:8px 0 4px;font-size:.95rem">${esc(v.title)}</h3><p class="small muted" style="margin:0">${esc(v.description || '')}</p></div></article>`;

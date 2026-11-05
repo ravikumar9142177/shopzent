@@ -330,16 +330,42 @@ export async function walletPage() {
   await requireLogin(); main().innerHTML = shell('Wallet & Coins', '<div id="wb">Loading…</div>'); bindLogout();
   const [w, c, led, coinsLed, ct] = await Promise.all([api.rpc('my_wallet'), api.rpc('my_coins').catch(() => null), api.select('wallet_ledger', { order: { col: 'created_at', asc: false }, limit: 200 }), api.select('coin_ledger', { order: { col: 'created_at', asc: false }, limit: 100 }).catch(() => []), api.rpc('my_coin_transfers').catch(() => null)]);
   const kindName = { return_credit: 'Return credit', promo_credit: 'Promotional credit', admin_adjust: 'Adjustment', purchase_debit: 'Used on order', reversal: 'Reversal / returned', refund_credit: 'Refund as store credit' };
-  $('#wb').innerHTML = `<div class="idcard"><div class="tiny" style="opacity:.85">SHOPZENT store credit</div><div style="font-size:2rem;font-weight:800">${inr(w.available)}</div><div class="row" style="gap:18px;margin-top:8px"><div><div class="tiny" style="opacity:.8">Wallet ID</div><code>${esc(w.wallet_id)}</code></div><div><div class="tiny" style="opacity:.8">Customer ID</div><code>${esc(w.customer_id)}</code></div></div></div>
-    <div class="kpis" style="margin:14px 0"><div class="kpi"><b>${inr(w.total_credits)}</b><span>Total credits</span></div><div class="kpi"><b>${inr(w.total_debits)}</b><span>Total used</span></div><div class="kpi"><b>${inr(w.pending_credits)}</b><span>Pending credits</span></div><div class="kpi"><b>${num(c?.balance || 0)}</b><span>Loyalty coins</span></div></div>
+  const coinsN = Number(c?.balance || 0); const avail = Number(c?.available ?? c?.balance ?? 0);
+  $('#wb').innerHTML = `<div class="wl-top-row"><a class="btn sec sm" href="profile.html">✏️ Edit profile</a><a class="tiny" href="wallet-terms.html">Wallet & coins terms</a></div>
+    <div class="wl-stage" id="wl-stage">
+      <div class="wl-card" id="wl-card" aria-label="SHOPZENT store credit card">
+        <span class="wl-shine" aria-hidden="true"></span><span class="wl-orb" aria-hidden="true"></span>
+        <div class="wl-head"><span class="wl-brand">SHOPZENT</span><span class="wl-chip" aria-hidden="true"></span></div>
+        <div class="wl-lbl">Store credit</div>
+        <div class="wl-amt" id="wl-credit" data-val="${Number(w.available) || 0}" data-money="1">${inr(w.available)}</div>
+        <div class="wl-ids"><div><span>Wallet ID</span><code>${esc(w.wallet_id)}</code></div><div><span>Customer ID</span><code>${esc(w.customer_id)}</code></div></div>
+      </div>
+      <div class="wl-coin-card" role="group" aria-label="Loyalty coins">
+        <div class="wl-coin3d" aria-hidden="true"><span>🪙</span></div>
+        <div class="wl-coin-tx"><span class="wl-lbl">Loyalty coins</span><b class="wl-count" id="wl-coins" data-val="${avail}">${num(avail)}</b><span class="tiny muted">${Number(c?.held) ? `on hold: ${num(c.held)} · ` : ''}1 coin = ₹0.80 · paise nahi</span></div>
+      </div>
+    </div>
+    <div class="kpis wl-kpis" style="margin:14px 0"><div class="kpi"><b>${inr(w.total_credits)}</b><span>Total credits</span></div><div class="kpi"><b>${inr(w.total_debits)}</b><span>Total used</span></div><div class="kpi"><b>${inr(w.pending_credits)}</b><span>Pending credits</span></div><div class="kpi"><b>${num(coinsN)}</b><span>Coins total</span></div></div>
     <div class="alert small">Store credit can be used only for eligible SHOPZENT purchases at checkout. It is <b>not</b> a bank account or money transfer service, cannot be withdrawn as cash and cannot be sent to other people. <a href="wallet-terms.html">Wallet & coins terms</a></div>
-    <div class="card pad"><h3>Wallet history</h3>${led.length ? `<div class="tbl-wrap" style="box-shadow:none"><table class="tbl"><tr><th>Date</th><th>Type</th><th>Amount</th><th>Ref</th></tr>${led.map((l) => `<tr><td class="tiny">${fmtDate(l.created_at)}</td><td>${esc(kindName[l.kind] || l.kind)}${l.status === 'pending' ? ' <span class="tag orange">pending</span>' : ''}<div class="tiny muted">${esc(l.note || '')}</div></td><td style="color:${l.direction === 'credit' ? 'var(--ok)' : 'var(--bad)'};font-weight:700;white-space:nowrap">${l.direction === 'credit' ? '+' : '−'}${inr(l.amount)}</td><td class="tiny"><code>${esc(l.txn_ref)}</code></td></tr>`).join('')}</table></div>` : '<p class="muted small">No wallet activity yet.</p>'}</div>
-    <div class="card pad" style="margin-top:14px"><h3>🪙 Loyalty coins</h3><p class="small muted">${esc(c?.rules || 'Coins are loyalty points for SHOPZENT promotions. They are not money and have no cash value.')}</p>${c && !c.enabled ? '<div class="alert warn small">The coin programme is paused right now.</div>' : ''}
+    <div class="card pad wl-panel"><h3>Wallet history</h3>${led.length ? `<div class="tbl-wrap wl-tbl" style="box-shadow:none"><table class="tbl"><tr><th>Date</th><th>Type</th><th>Amount</th><th>Ref</th></tr>${led.map((l) => `<tr><td class="tiny">${fmtDate(l.created_at)}</td><td>${esc(kindName[l.kind] || l.kind)}${l.status === 'pending' ? ' <span class="tag orange">pending</span>' : ''}<div class="tiny muted">${esc(l.note || '')}</div></td><td style="color:${l.direction === 'credit' ? 'var(--ok)' : 'var(--bad)'};font-weight:700;white-space:nowrap">${l.direction === 'credit' ? '+' : '−'}${inr(l.amount)}</td><td class="tiny"><code>${esc(l.txn_ref)}</code></td></tr>`).join('')}</table></div>` : '<p class="muted small">No wallet activity yet.</p>'}</div>
+    <div class="card pad wl-panel" style="margin-top:14px"><h3>🪙 Loyalty coins</h3><p class="small muted">${esc(c?.rules || 'Coins are loyalty points for SHOPZENT promotions. They are not money and have no cash value.')}</p>${c && !c.enabled ? '<div class="alert warn small">The coin programme is paused right now.</div>' : ''}
     <p class="small">Available: <b>${num(c?.available ?? c?.balance ?? 0)}</b>${Number(c?.held) ? ` · on hold (transfer request me): ${num(c.held)}` : ''}</p>
     ${coinsLed.length ? `<table class="tbl">${coinsLed.map((l) => `<tr><td class="tiny">${fmtDate(l.created_at)}</td><td>${esc({ issue: 'Received', transfer_in: 'Received from another customer', transfer_out: 'Sent to another customer', reversal: 'Reversed', redeem: 'Redeemed', expire: 'Expired' }[l.kind] || l.kind)}<div class="tiny muted">${esc(l.note || '')}${l.expires_at ? ' · expires ' + fmtDate(l.expires_at, false) : ''}</div></td><td style="font-weight:700">${l.kind === 'issue' || l.kind === 'transfer_in' ? '+' : '−'}${num(l.coins)}</td></tr>`).join('')}</table>` : '<p class="small muted">No coins yet.</p>'}</div>
     ${coinTransferCard(ct)}`;
+  countUpWallet();
   wireCoinTransfer();
   await appendShareEarnings();
+}
+
+// count-up for the wallet numbers (skipped for reduced motion). Pure display: the numbers come from the server.
+function countUpWallet() {
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const card = document.getElementById('wl-card'); const coinsEl = document.getElementById('wl-coins'); const creditEl = document.getElementById('wl-credit');
+  if (card && !reduce) { card.onpointermove = (ev) => { const r = card.getBoundingClientRect(); const x = (ev.clientX - r.left) / r.width - 0.5, y = (ev.clientY - r.top) / r.height - 0.5; card.style.transform = `rotateX(${(-y * 8).toFixed(2)}deg) rotateY(${(x * 10).toFixed(2)}deg)`; }; card.onpointerleave = () => { card.style.transform = ''; }; }
+  if (reduce) return;
+  const run = (el, fmt) => { const to = Number(el.dataset.val) || 0; const t0 = performance.now(), dur = 900; const final0 = el.textContent; el.dataset.final = final0; const step = (now) => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = k < 1 ? fmt(Math.round(to * e)) : final0; if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); };
+  if (coinsEl) run(coinsEl, (n) => n.toLocaleString('en-IN'));
+  if (creditEl) run(creditEl, (n) => '₹' + n.toLocaleString('en-IN'));
 }
 
 // ---------- coin transfers between customers: request -> admin approval (never instant) ----------

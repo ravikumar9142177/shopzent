@@ -16,6 +16,7 @@ export function createEngine({ canvas, hud, onFinish, onHudChange }) {
   let events = [], recent = [], score = 0, combo = 0, bestCombo = 0, hits = 0, mult = 1, nowMs = 0;
   let particles = [], rings = [], pops = [], shake = 0, flash = 0, goAt = -1, lastHud = '';
   let seed = 0, onDone = null, shown = { score: -1, combo: -1, time: -1, mult: -1 };
+  let skyA = null, skyB = null, sunC = null, lightX = 0, lightY = 0, lightA = 0; // visuals only
 
   function glow(color, size, inner) {
     const c = document.createElement('canvas'); c.width = c.height = size;
@@ -47,6 +48,29 @@ export function createEngine({ canvas, hud, onFinish, onHudChange }) {
     const b = bgCanvas.getContext('2d'); b.scale(dpr, dpr);
     const blobs = [[0.15, 0.25, 0.55, 'rgba(124,58,237,0.45)'], [0.9, 0.55, 0.6, 'rgba(14,165,233,0.35)'], [0.4, 0.9, 0.5, 'rgba(236,72,153,0.28)']];
     for (const [x, y, rr, col] of blobs) { const gr = b.createRadialGradient(x * W, y * H, 0, x * W, y * H, rr * Math.max(W, H)); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)'); b.fillStyle = gr; b.fillRect(0, 0, W, H); }
+    // synthwave sun with cut stripes, low on the horizon (cached once per size)
+    sunC = document.createElement('canvas'); sunC.width = Math.round(W * dpr); sunC.height = Math.round(H * dpr);
+    const s = sunC.getContext('2d'); s.scale(dpr, dpr); const sr = Math.min(W, H) * 0.3, sx = W / 2, sy = H * 0.66;
+    const sg = s.createRadialGradient(sx, sy - sr * 0.3, sr * 0.1, sx, sy, sr); sg.addColorStop(0, '#fef08a'); sg.addColorStop(0.45, '#f472b6'); sg.addColorStop(1, 'rgba(124,58,237,0)');
+    s.fillStyle = sg; s.beginPath(); s.arc(sx, sy, sr, 0, TAU); s.fill();
+    s.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 6; i++) { const yy = sy + sr * (0.12 + i * 0.14); s.fillRect(sx - sr, yy, sr * 2, 2 + i * 0.7); } s.globalCompositeOperation = 'source-over';
+    // two city-skyline layers for parallax (far = dim, near = darker), each twice the screen width so it can wrap
+    skyA = skyline(0.6, 'rgba(76,29,149,0.55)', 11); skyB = skyline(0.74, 'rgba(12,6,34,0.92)', 23);
+    // vignette
+    const vg = b.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.35, W / 2, H * 0.5, Math.max(W, H) * 0.78);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.6)'); b.fillStyle = vg; b.fillRect(0, 0, W, H);
+  }
+  function skyline(base, color, seed) {
+    const c = document.createElement('canvas'); c.width = Math.round(W * 2 * dpr); c.height = Math.round(H * dpr);
+    const x = c.getContext('2d'); x.scale(dpr, dpr); let r = seed; const rn = () => { r = (r * 9301 + 49297) % 233280; return r / 233280; };
+    let px = 0;
+    while (px < W * 2) {
+      const bw = 14 + rn() * 34, bh = H * (base - rn() * 0.16), top = H - bh;
+      x.fillStyle = color; x.fillRect(px, top, bw, bh);
+      for (let wy = top + 8; wy < H - 8; wy += 9) for (let wx = px + 4; wx < px + bw - 5; wx += 7) if (rn() < 0.09) { x.fillStyle = rn() < 0.5 ? 'rgba(34,211,238,0.75)' : 'rgba(244,114,182,0.7)'; x.fillRect(wx, wy, 2, 3); }
+      px += bw + rn() * 6;
+    }
+    return c;
   }
   function resize() {
     const r = canvas.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(300, r.height);
@@ -72,12 +96,19 @@ export function createEngine({ canvas, hud, onFinish, onHudChange }) {
     const grd = g.createLinearGradient(0, 0, 0, H); grd.addColorStop(0, '#07041a'); grd.addColorStop(0.6, '#140a33'); grd.addColorStop(1, '#1c0b3d');
     g.fillStyle = grd; g.fillRect(-20, -20, W + 40, H + 40);
     if (bgCanvas) g.drawImage(bgCanvas, 0, 0, W, H);
+    if (sunC) { const bob = Math.sin(now / 1100) * 2.5; g.drawImage(sunC, 0, bob, W, H); }
+    // parallax skylines (far layer slow, near layer faster); the wrap is seamless because each layer is two screens wide
+    if (skyA && skyB) {
+      const oa = (now / 60) % W, ob = (now / 26) % W;
+      g.drawImage(skyA, -oa, 0, W * 2, H); g.drawImage(skyB, -ob, 0, W * 2, H);
+    }
     // stars: three parallax layers scrolling down
     for (const st of stars) {
       st.y += st.v * 0.016 / H; if (st.y > 1) { st.y -= 1; st.x = Math.random(); }
       g.fillStyle = `rgba(255,255,255,${0.35 + st.layer * 0.25})`;
       g.fillRect(st.x * W, st.y * H, st.s, st.s);
     }
+    if (lightA > 0.01) { g.save(); g.globalCompositeOperation = 'lighter'; const lr = R * 5; const lgr = g.createRadialGradient(lightX, lightY, 0, lightX, lightY, lr); lgr.addColorStop(0, `rgba(34,211,238,${0.22 * lightA})`); lgr.addColorStop(1, 'rgba(34,211,238,0)'); g.fillStyle = lgr; g.fillRect(lightX - lr, lightY - lr, lr * 2, lr * 2); g.restore(); }
     // neon perspective floor
     const hz = H * 0.74, vx = W / 2, off = (now / 1400) % 1;
     g.save(); g.beginPath(); g.rect(0, hz, W, H - hz); g.clip();
@@ -94,6 +125,7 @@ export function createEngine({ canvas, hud, onFinish, onHudChange }) {
       const s = a.s, [px, py] = tgtXY(s), age = (now - s.t) / 120, sc = age >= 1 ? 1 : Math.max(0.01, easeOutBack(Math.max(0, age)));
       const kindKey = s.kind === KIND.GOLD ? 'gold' : s.kind === KIND.BOMB ? 'bomb' : 'normal';
       const spr = sp[kindKey], S = sp.S / dpr;
+      g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(px, py + R * 1.15, R * 0.95 * sc, R * 0.28 * sc, 0, 0, TAU); g.fill();
       if (s.kind === KIND.GOLD) { const gg = sp.glow.gold; g.drawImage(gg, px - S * 0.7 * sc, py - S * 0.7 * sc, S * 1.4 * sc, S * 1.4 * sc); }
       else if (s.kind === KIND.BOMB) { const gg = sp.glow.red; const pulse = 1 + 0.06 * Math.sin(now / 90); g.drawImage(gg, px - S * 0.7 * sc * pulse, py - S * 0.7 * sc * pulse, S * 1.4 * sc * pulse, S * 1.4 * sc * pulse); }
       else { const gg = sp.glow.cyan; g.drawImage(gg, px - S * 0.7 * sc, py - S * 0.7 * sc, S * 1.4 * sc, S * 1.4 * sc); }
@@ -125,6 +157,21 @@ export function createEngine({ canvas, hud, onFinish, onHudChange }) {
     if (flash > 0) { g.fillStyle = `rgba(251,113,133,${flash * 0.35})`; g.fillRect(0, 0, W, H); flash = Math.max(0, flash - dt * 2.5); }
   }
 
+  function drawTitleCard(el) { // first ~2.6 s of the countdown: title card with a light sweep (camera dolly is applied in frame)
+    if (el < 0 || el > 2600) return;
+    const k = Math.min(1, el / 650), fade = el > 2000 ? Math.max(0, (2600 - el) / 600) : 1, e = 1 - Math.pow(1 - k, 3);
+    const y = H * 0.24 + (1 - e) * -26;
+    g.save(); g.globalAlpha = fade;
+    const sx = (el / 1300) * (W + 320) - 160;
+    const sw = g.createLinearGradient(sx - 90, 0, sx + 90, 0); sw.addColorStop(0, 'rgba(255,255,255,0)'); sw.addColorStop(0.5, 'rgba(255,255,255,0.16)'); sw.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = sw; g.fillRect(sx - 90, y - H * 0.11, 180, H * 0.22);
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.globalAlpha = fade * k;
+    g.font = `900 ${Math.round(Math.min(W, H) * 0.11)}px system-ui, sans-serif`; g.shadowColor = PAL.pink; g.shadowBlur = 34; g.fillStyle = PAL.white;
+    g.fillText('TAP RUSH', W / 2, y);
+    g.shadowBlur = 0; g.font = `800 ${Math.round(Math.min(W, H) * 0.034)}px system-ui, sans-serif`; g.fillStyle = PAL.violet;
+    g.fillText('30 SEC · TARGET TAK PAHUNCHO', W / 2, y + Math.min(W, H) * 0.12);
+    g.restore();
+  }
   function drawCountdown(now) {
     const left = COUNTDOWN - (now - cdStart); if (left < 0) return;
     const n = Math.ceil(left / 1000), label = n > 0 ? String(n) : 'GO';
@@ -152,11 +199,14 @@ export function createEngine({ canvas, hud, onFinish, onHudChange }) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (shake > 0) { shake *= Math.exp(-dt * 12); if (shake < 0.2) shake = 0; }
     g.save(); if (shake > 0) g.translate(rnd(-shake, shake), rnd(-shake, shake));
+    if (state === 'countdown') { const dl = 1 + 0.12 * (1 - Math.min(1, (realNow - cdStart) / COUNTDOWN)); g.translate(W / 2, H / 2); g.scale(dl, dl); g.translate(-W / 2, -H / 2); }
+    lightA *= Math.exp(-dt * 4.5);
     drawBackground(realNow);
     if (state === 'countdown') {
       const el = realNow - cdStart, n = Math.floor(el / 1000);
       if (n !== cdLast && n < 3) { cdLast = n; sfx.tick(false); }
       if (el >= COUNTDOWN) { state = 'play'; t0 = cdStart + COUNTDOWN; goAt = t0; sfx.tick(true); startMusic(); }
+      drawTitleCard(realNow - cdStart);
       drawCountdown(realNow);
     } else if (state === 'play') {
       nowMs = realNow - t0;
@@ -183,6 +233,7 @@ export function createEngine({ canvas, hud, onFinish, onHudChange }) {
     if (state !== 'play') return;
     e.preventDefault();
     const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    lightX = x; lightY = y; lightA = 1;
     const now = Math.min(DUR, Math.round(performance.now() - t0));
     if (now >= DUR) return;
     if (events.length && now - events[events.length - 1].t < MIN_GAP) return;     // faster than a finger can tap: ignored
@@ -206,6 +257,7 @@ export function createEngine({ canvas, hud, onFinish, onHudChange }) {
       rings.push({ x: px, y: py, age: 0, life: 0.35, c: col });
       pop(px, py - R, '+' + pts * mult, combo >= 10 ? PAL.pink : PAL.white, combo >= 10);
       shake = Math.min(shake + 1.5, 6); vibrate(10);
+      if (combo % 10 === 0) { rings.push({ x: px, y: py, age: 0, life: 0.6, c: PAL.pink }); burst(px, py, PAL.pink, 30, 340); shake = Math.min(shake + 4, 9); }
       if (s.kind === KIND.GOLD) sfx.gold(); else sfx.hit(combo);
     }
   }

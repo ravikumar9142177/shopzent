@@ -130,16 +130,16 @@ export async function chrome() {
     <div class="hdr-actions"><a class="icon-btn hide-sm" href="${href('wishlist.html')}" aria-label="Wishlist">${IC.heart}</a>
       ${p ? `<button class="icon-btn" id="bell-btn" type="button" aria-label="Notifications">${IC.bell}<span class="badge" id="bell-n" style="display:none"></span></button>` : ''}
       <a class="icon-btn" href="${href('cart.html')}" aria-label="Cart">${IC.cart}<span class="badge" data-cart-count></span></a>
-      <a class="icon-btn hide-sm" href="${href(p ? 'dashboard.html' : 'login.html')}" aria-label="${p ? 'My account' : 'Log in'}">${IC.user}</a></div>
+      <a class="icon-btn hide-sm" href="${href(p ? 'wallet.html' : 'login.html')}" aria-label="${p ? 'My wallet' : 'Log in'}">${IC.user}</a></div>
   </div><nav class="nav" aria-label="Main"><div class="container"><ul>${NAV.map(([h, l]) => `<li><a href="${href(h)}" class="${h === here ? 'active' : ''}">${l}</a></li>`).join('')}</ul></div></nav></header>
   <div class="drawer" id="drawer" aria-hidden="true"><div class="shade" data-close-drawer></div><div class="panel" role="dialog" aria-label="Menu">
     <div class="logo-c" style="margin:0 0 10px"><img src="${href('assets/logo-lockup.png')}" alt="SHOPZENT" style="height:34px"></div>
-    ${p ? `<div class="alert" style="margin:6px 4px 10px">Hi <b>${esc(p.full_name || 'there')}</b> · <code>${esc(p.customer_id || '')}</code></div>` : `<div class="row" style="margin:8px 4px 12px"><a class="btn sm" href="${href('login.html')}" style="color:#fff">Log in</a><a class="btn sm sec" href="${href('register.html')}">Sign up</a></div>`}
+    ${p ? `<a class="drawer-me" href="${href('wallet.html')}" aria-label="Open my wallet"><div class="alert" style="margin:6px 4px 10px">Hi <b>${esc(p.full_name || 'there')}</b> · <code>${esc(p.customer_id || '')}</code> <span class="tiny" style="color:var(--purple);font-weight:700">Wallet →</span></div></a>` : `<div class="row" style="margin:8px 4px 12px"><a class="btn sm" href="${href('login.html')}" style="color:#fff">Log in</a><a class="btn sm sec" href="${href('register.html')}">Sign up</a></div>`}
     ${(() => { const L = (arr) => arr.map(([h, l]) => `<a href="${href(h)}">${l}</a>`).join('');
       const G = (ic, t, inner, open) => `<div class="dg${open ? ' open' : ''}"><button type="button" class="dg-h" aria-expanded="${open ? 'true' : 'false'}"><span>${ic} ${t}</span><i aria-hidden="true">›</i></button><div class="dg-b">${inner}</div></div>`;
       const adm = p && ['admin', 'super_admin'].includes(p.role) ? `<a href="${href('admin/index.html')}">🛡️ Admin Panel</a>` : '';
       return `<a class="dg-top" href="${href('index.html')}">🏠 Home</a>`
-        + G('🛍️', 'Shop', L([['products.html', 'All Products'], ['categories.html', 'Categories'], ['trending.html', 'Trending'], ['deals.html', 'Best Deals'], ['featured.html', 'Featured'], ['brands.html', 'Brands'], ['offers.html', 'Coupons & Offers'], ['game.html', '🎮 Play Game']]))
+        + G('🛍️', 'Shop', L([['products.html', 'All Products'], ['categories.html', 'Categories'], ['trending.html', 'Trending'], ['deals.html', 'Best Deals'], ['featured.html', 'Featured'], ['brands.html', 'Brands'], ['offers.html', 'Coupons & Offers'], ['games.html', '🎮 Play Game']]))
         + G('📲', 'Apps & Videos', L([['apps.html', 'Digital Apps'], ['apk.html', 'APK Downloads'], ['videos.html', 'Video Tutorials'], ['promo-videos.html', 'Promo Videos']]))
         + G('👤', 'My Account', L([['dashboard.html', 'Dashboard'], ['orders.html', 'My Orders'], ['wallet.html', 'Wallet & Coins'], ['wishlist.html', 'Wishlist'], ['returns.html', 'Returns / Refunds'], ['profile.html', 'Profile & Security']]) + adm + (p ? '<a href="#" data-logout>Log out</a>' : ''))
         + G('ℹ️', 'Help', L([['about.html', 'About Us'], ['contact.html', 'Contact Us'], ['ads.html', 'Advertisements'], ['privacy.html', 'Privacy Policy'], ['terms.html', 'Terms'], ['affiliate-disclosure.html', 'Affiliate Disclosure']])); })()}
@@ -162,8 +162,8 @@ export async function chrome() {
   // App-style bottom tab bar (phone). Hidden where it would get in the way: checkout, payment, login and account-recovery pages.
   if (!NO_TAB_BAR.includes(page) && !here.startsWith('admin')) {
     const bn = document.createElement('nav'); bn.className = 'bnav'; bn.setAttribute('aria-label', 'Quick');
-    bn.innerHTML = [['index.html', 'Home', IC.home], ['categories.html', 'Categories', IC.grid], ['wishlist.html', 'Saved', IC.heart], ['cart.html', 'Cart', IC.cart + '<span class="badge" data-cart-count></span>'], [p ? 'profile.html' : 'login.html', p ? 'Account' : 'Login', IC.user]]
-      .map(([h, l, i]) => `<a href="${href(h)}" class="${h === here || (h === 'profile.html' && here === 'dashboard.html') ? 'active' : ''}"${h === 'cart.html' ? ' data-tab="cart"' : ''}>${i}<span>${l}</span></a>`).join('');
+    bn.innerHTML = [['index.html', 'Home', IC.home], ['categories.html', 'Categories', IC.grid], ['wishlist.html', 'Saved', IC.heart], ['cart.html', 'Cart', IC.cart + '<span class="badge" data-cart-count></span>'], [p ? 'wallet.html' : 'login.html', p ? 'Wallet' : 'Login', IC.user]]
+      .map(([h, l, i]) => `<a href="${href(h)}" class="${h === here || (h === 'wallet.html' && (here === 'profile.html' || here === 'dashboard.html')) ? 'active' : ''}"${h === 'cart.html' ? ' data-tab="cart"' : ''}>${i}<span>${l}</span></a>`).join('');
     document.body.appendChild(bn); document.body.classList.add('has-bnav');
   }
   if (page !== 'payment' && page !== 'payment-submit') { const wa = document.createElement('a'); wa.className = 'wa-float'; wa.href = waLink(c.whatsapp, 'Hi SHOPZENT, I need help'); wa.target = '_blank'; wa.rel = 'noopener'; wa.setAttribute('aria-label', 'Chat on WhatsApp'); wa.innerHTML = IC.wa; document.body.appendChild(wa); }

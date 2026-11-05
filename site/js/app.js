@@ -3,6 +3,7 @@ import { chrome } from './layout.js';
 import * as C from './pages/catalog.js';
 import * as A from './pages/account.js';
 import * as G from './pages/game.js';
+import * as GH from './pages/games.js';
 import { api, DEMO } from './api.js';
 import { watchForms, waLink, esc } from './util.js';
 const PAGES = {
@@ -12,6 +13,7 @@ const PAGES = {
   login: A.login, register: A.register, forgot: A.forgot, reset: A.reset, dashboard: A.dashboard, profile: A.profilePage, wishlist: A.wishlistPage, cart: A.cartPage, checkout: A.checkout,
   payment: A.payment, 'payment-submit': A.paymentSubmit, orders: A.orders, order: A.orderDetail, wallet: A.walletPage, returns: A.returnsPage,
   game: G.gamePage,
+  games: GH.gamesHub, play: GH.arcadePage,
 };
 // Maintenance mode: when the admin has UNPUBLISHED the site, visitors see a friendly closed page (admins still see the site, with a banner).
 function closedPage(st) {

@@ -233,6 +233,16 @@ export async function gamePage() {
       ${prizeLine}
       <button type="button" class="tr-go" data-go>Phir se khelo</button>
       ${me ? '' : ''}</div>`);
+    countUp($('#tr-ov .tr-final'), out.score);
+  }
+
+  // score count-up on the game-over card (display only; the number is the one the server checked)
+  function countUp(el, to) {
+    if (!el) return; const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const target = Number(to) || 0; if (reduce || target < 1) { el.textContent = fmt(target); return; }
+    const t0 = performance.now(), dur = Math.min(1100, 400 + target * 0.6);
+    const step = (now) => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(Math.round(target * e)); if (k < 1 && el.isConnected) requestAnimationFrame(step); };
+    el.textContent = '0'; requestAnimationFrame(step);
   }
 
   // first paint
