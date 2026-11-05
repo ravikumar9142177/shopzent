@@ -5,4 +5,4 @@ Disallow: /dashboard.html
 Disallow: /checkout.html
 Disallow: /payment.html
 Disallow: /payment-submit.html
-Sitemap: https://YOUR-DOMAIN/sitemap.xml
+Sitemap: https://qeuika.shop/sitemap.xml
