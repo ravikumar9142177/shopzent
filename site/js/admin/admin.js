@@ -595,18 +595,30 @@ M['game-winners'] = async () => {
     $('#gw-tot').textContent = `Pending: ${d.pending || 0} · this week ${d.week_key || ''}`;
     const rows = d.rows || [];
     if (!rows.length) { $('#gw-list').innerHTML = '<p class="small muted">Abhi koi winner nahi.</p>'; return; }
-    $('#gw-list').innerHTML = rows.map((r) => `<div class="card pad" style="box-shadow:none;border:1px solid var(--line);margin-bottom:10px" data-id="${esc(r.id)}">
+    $('#gw-list').innerHTML = rows.map((r) => {
+      const pending = r.submit_status === 'pending', approved = r.submit_status === 'approved';
+      const nameVal = approved ? (r.name_approved || '') : (r.name_submitted || '');
+      return `<div class="card pad" style="box-shadow:none;border:1px solid var(--line);margin-bottom:10px" data-id="${esc(r.id)}">
       <div class="row between" style="flex-wrap:wrap;gap:6px"><b class="small">${esc(r.week_key)} · #${esc(r.place)} · ${esc(r.customer_id || '')}</b>
-        <span class="tag ${r.submit_status === 'approved' ? 'green' : r.submit_status === 'rejected' ? 'red' : r.submit_status === 'pending' ? 'pink' : 'orange'}">${esc(r.submit_status)}</span></div>
+        <span class="tag ${approved ? 'green' : r.submit_status === 'rejected' ? 'red' : pending ? 'pink' : 'orange'}">${esc(r.submit_status === 'none' ? 'no photo / name yet' : r.submit_status)}</span></div>
       <div class="tiny muted">${esc(r.full_name || '—')} · score ${num(r.score)} · ${num(r.coins)} coins · won ${fmtDate(r.won_at)}</div>
       ${r.submit_status === 'rejected' ? `<div class="tiny muted">Reject reason: ${esc(r.reject_reason || '')}</div>` : ''}
       <div class="row" style="gap:12px;align-items:flex-start;margin-top:8px;flex-wrap:wrap">
-        <div data-prev style="width:120px;height:120px;border-radius:12px;background:#f3f4f6;display:grid;place-items:center;overflow:hidden"><span class="tiny muted">${r.submit_status === 'none' ? 'no photo' : 'loading…'}</span></div>
+        <div data-prev style="width:120px;height:120px;border-radius:12px;background:#f3f4f6;display:grid;place-items:center;overflow:hidden"><span class="tiny muted">loading…</span></div>
         <div style="flex:1;min-width:220px;display:grid;gap:8px">
-          <label class="small">Display name (2–30, bina link ke)<input data-name value="${esc(r.submit_status === 'approved' ? r.name_approved || '' : r.name_submitted || '')}" maxlength="30"></label>
-          ${r.submit_status === 'pending' ? `<div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-ap>Approve</button><button class="btn danger sm" data-rj>Reject</button></div>` : ''}
-          ${r.submit_status === 'approved' ? `<label class="small">Replace photo (optional)<input type="file" accept="image/*" data-file></label><div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-save>Save name / photo</button><button class="btn danger sm" data-rj>Remove from game</button></div>` : ''}
-        </div></div></div>`).join('');
+          <label class="small">Edit name (2–30, bina link ke)<input data-name value="${esc(nameVal)}" maxlength="30" placeholder="Winner ka naam"></label>
+          <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+            <label class="btn sec sm" style="position:relative;cursor:pointer">📷 Upload photo<input type="file" accept="image/*" data-file style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></label>
+            <span class="tiny muted" data-fname>${pending ? 'Customer ki bheji photo (badalna ho to upload karo)' : 'JPG/PNG, 300 px me compress hoga'}</span>
+          </div>
+          <div class="row" style="gap:6px;flex-wrap:wrap">
+            <button class="btn sm" data-save data-mode="${pending ? 'approve' : 'save'}">${pending ? 'Approve' : 'Save name / photo'}</button>
+            ${pending ? '<button class="btn danger sm" data-rj>Reject</button>' : ''}
+            ${approved ? '<button class="btn danger sm" data-rj>Remove from game</button>' : ''}
+          </div>
+          <p class="tiny muted" style="margin:0">${pending ? 'Customer ne bheja hai. Approve karte hi ye naam aur photo game ke neeche live ho jayenge.' : 'Admin ka set kiya naam aur photo turant game ke podium par dikhega (koi customer submission nahi chahiye).'}</p>
+        </div></div></div>`;
+    }).join('');
     // previews: pending photo from the private bucket (signed link), approved photo from the public bucket
     for (const r of rows) {
       const box = document.querySelector(`#gw-list [data-id="${CSS.escape(String(r.id))}"] [data-prev]`); if (!box) continue;
@@ -617,14 +629,22 @@ M['game-winners'] = async () => {
       } catch { box.innerHTML = '<span class="tiny muted">photo not loading</span>'; }
     }
   };
+  $('#gw-list').addEventListener('change', (e) => {
+    const f = e.target.closest('[data-file]'); if (!f) return;
+    const card = f.closest('[data-id]'); const file = f.files && f.files[0]; if (!card || !file) return;
+    if (!/^image\//.test(file.type)) { f.value = ''; return bad('Sirf photo (JPG/PNG) chuno.'); }
+    card.querySelector('[data-fname]').textContent = `${file.name.slice(0, 40)} · ${Math.round(file.size / 1024)} KB (save par compress hoga)`;
+    card.querySelector('[data-prev]').innerHTML = `<img src="${URL.createObjectURL(file)}" alt="" style="width:100%;height:100%;object-fit:cover">`;
+  });
   $('#gw-list').addEventListener('click', async (e) => {
     const card = e.target.closest('[data-id]'); if (!card) return;
     const b = e.target.closest('button'); if (!b) return;
     const id = Number(card.dataset.id), name = card.querySelector('[data-name]').value.trim();
-    if (b.matches('[data-ap],[data-save]')) {
+    if (b.matches('[data-save]')) {
       const fileIn = card.querySelector('[data-file]'); const file = fileIn && fileIn.files[0];
-      const pend = b.matches('[data-ap]');
-      const c = await confirmBox(pend ? 'Approve this photo and name?' : 'Save this name / photo?', pend ? 'Ye photo aur naam game ke neeche live ho jayega.' : 'Game ke neeche ye naam aur photo dikhegi.', { ok: pend ? 'Approve' : 'Save' });
+      const pend = b.dataset.mode === 'approve';
+      if (name.length < 2 || name.length > 30 || /(:\/\/|www\.|@|[<>]|\.(com|in|net|org|shop|co|io|me|xyz|info|app|ru|tk)\b)/i.test(name) || /[\x00-\x1f\x7f]/.test(name)) return bad('Naam 2–30 characters ka ho, bina link, @ ya < > ke.');
+      const c = await confirmBox(pend ? 'Approve this photo and name?' : 'Save this name / photo?', pend ? 'Ye photo aur naam game ke neeche live ho jayega.' : 'Game ke neeche ye naam aur photo dikhegi (turant live).', { ok: pend ? 'Approve' : 'Save' });
       if (!c) return;
       try {
         b.disabled = true;
@@ -642,7 +662,7 @@ M['game-winners'] = async () => {
         }
         const old = cur.photo_public_path;
         await call('admin_game_approve', { p_win_id: id, p_name: name, p_public_path: publicPath });
-        if (copiedPending) await api.removeFile('game-photos', cur.photo_pending_path).catch(() => {});
+        if (cur.photo_pending_path && (copiedPending || file)) await api.removeFile('game-photos', cur.photo_pending_path).catch(() => {});
         if (old && old !== publicPath) await api.removeFile('public-media', old).catch(() => {});
         ok('Saved ✓'); await load();
       } catch (x) { bad(x); b.disabled = false; }
