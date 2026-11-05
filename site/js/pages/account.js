@@ -328,9 +328,11 @@ export async function walletPage() {
     return;
   }
   await requireLogin(); main().innerHTML = shell('Wallet & Coins', '<div id="wb">Loading…</div>'); bindLogout();
-  const [w, c, led, coinsLed, ct] = await Promise.all([api.rpc('my_wallet'), api.rpc('my_coins').catch(() => null), api.select('wallet_ledger', { order: { col: 'created_at', asc: false }, limit: 200 }), api.select('coin_ledger', { order: { col: 'created_at', asc: false }, limit: 100 }).catch(() => []), api.rpc('my_coin_transfers').catch(() => null)]);
+  const [w, c, led, coinsLed] = await Promise.all([api.rpc('my_wallet'), api.rpc('my_coins').catch(() => null), api.select('wallet_ledger', { order: { col: 'created_at', asc: false }, limit: 200 }), api.select('coin_ledger', { order: { col: 'created_at', asc: false }, limit: 100 }).catch(() => [])]);
   const kindName = { return_credit: 'Return credit', promo_credit: 'Promotional credit', admin_adjust: 'Adjustment', purchase_debit: 'Used on order', reversal: 'Reversal / returned', refund_credit: 'Refund as store credit' };
-  const coinsN = Number(c?.balance || 0); const avail = Number(c?.available ?? c?.balance ?? 0);
+  const WKIND = { return_credit: '↩️', promo_credit: '🎁', admin_adjust: '⚙️', purchase_debit: '🛍️', reversal: '↩️', refund_credit: '💸' };
+  const coinsN = Number(c?.balance || 0); const avail = Number(c?.available ?? c?.balance ?? 0); const held = Number(c?.held) || 0;
+  const coinRows = coinsLed.map((l) => ({ l, k: coinKind(l) }));
   $('#wb').innerHTML = `<div class="wl-top-row"><a class="btn sec sm" href="profile.html">✏️ Edit profile</a><a class="tiny" href="wallet-terms.html">Wallet & coins terms</a></div>
     <div class="wl-stage" id="wl-stage">
       <div class="wl-card" id="wl-card" aria-label="SHOPZENT store credit card">
@@ -341,20 +343,38 @@ export async function walletPage() {
         <div class="wl-ids"><div><span>Wallet ID</span><code>${esc(w.wallet_id)}</code></div><div><span>Customer ID</span><code>${esc(w.customer_id)}</code></div></div>
       </div>
       <div class="wl-coin-card" role="group" aria-label="Loyalty coins">
+        <span class="wl-shine" aria-hidden="true"></span>
         <div class="wl-coin3d" aria-hidden="true"><span>🪙</span></div>
-        <div class="wl-coin-tx"><span class="wl-lbl">Loyalty coins</span><b class="wl-count" id="wl-coins" data-val="${avail}">${num(avail)}</b><span class="tiny muted">${Number(c?.held) ? `on hold: ${num(c.held)} · ` : ''}1 coin = ₹0.80 · paise nahi</span></div>
+        <div class="wl-coin-tx"><span class="wl-lbl">Loyalty coins</span><b class="wl-count" id="wl-coins" data-val="${avail}">${num(avail)}</b><span class="tiny muted">${held ? `on hold: ${num(held)} · ` : ''}1 coin = ₹0.80 · paise nahi</span></div>
       </div>
     </div>
+    <nav class="wl-quick" aria-label="Quick actions">
+      <a class="wl-qa" href="products.html"><span aria-hidden="true">🛍️</span>Shop</a>
+      <a class="wl-qa" href="#share-earn"><span aria-hidden="true">🔗</span>Share &amp; Earn</a>
+      <a class="wl-qa" href="games.html"><span aria-hidden="true">🎮</span>Play Games</a>
+    </nav>
     <div class="kpis wl-kpis" style="margin:14px 0"><div class="kpi"><b>${inr(w.total_credits)}</b><span>Total credits</span></div><div class="kpi"><b>${inr(w.total_debits)}</b><span>Total used</span></div><div class="kpi"><b>${inr(w.pending_credits)}</b><span>Pending credits</span></div><div class="kpi"><b>${num(coinsN)}</b><span>Coins total</span></div></div>
     <div class="alert small">Store credit can be used only for eligible SHOPZENT purchases at checkout. It is <b>not</b> a bank account or money transfer service, cannot be withdrawn as cash and cannot be sent to other people. <a href="wallet-terms.html">Wallet & coins terms</a></div>
-    <div class="card pad wl-panel"><h3>Wallet history</h3>${led.length ? `<div class="tbl-wrap wl-tbl" style="box-shadow:none"><table class="tbl"><tr><th>Date</th><th>Type</th><th>Amount</th><th>Ref</th></tr>${led.map((l) => `<tr><td class="tiny">${fmtDate(l.created_at)}</td><td>${esc(kindName[l.kind] || l.kind)}${l.status === 'pending' ? ' <span class="tag orange">pending</span>' : ''}<div class="tiny muted">${esc(l.note || '')}</div></td><td style="color:${l.direction === 'credit' ? 'var(--ok)' : 'var(--bad)'};font-weight:700;white-space:nowrap">${l.direction === 'credit' ? '+' : '−'}${inr(l.amount)}</td><td class="tiny"><code>${esc(l.txn_ref)}</code></td></tr>`).join('')}</table></div>` : '<p class="muted small">No wallet activity yet.</p>'}</div>
+    <div class="card pad wl-panel"><h3>Wallet history</h3>${led.length ? `<div class="tbl-wrap wl-tbl" style="box-shadow:none"><table class="tbl"><tr><th>Date</th><th>Type</th><th>Amount</th><th>Ref</th></tr>${led.map((l) => `<tr><td class="tiny">${fmtDate(l.created_at)}</td><td><span class="wl-ic" aria-hidden="true">${WKIND[l.kind] || '💼'}</span>${esc(kindName[l.kind] || l.kind)}${l.status === 'pending' ? ' <span class="tag orange">pending</span>' : ''}<div class="tiny muted">${esc(l.note || '')}</div></td><td style="color:${l.direction === 'credit' ? 'var(--ok)' : 'var(--bad)'};font-weight:700;white-space:nowrap">${l.direction === 'credit' ? '+' : '−'}${inr(l.amount)}</td><td class="tiny"><code>${esc(l.txn_ref)}</code></td></tr>`).join('')}</table></div>` : '<div class="wl-empty"><span aria-hidden="true">🧾</span><p class="small">Abhi wallet me koi entry nahi. Order par store credit use hoga, ya refund aayega to yahan dikhega.</p></div>'}</div>
     <div class="card pad wl-panel" style="margin-top:14px"><h3>🪙 Loyalty coins</h3><p class="small muted">${esc(c?.rules || 'Coins are loyalty points for SHOPZENT promotions. They are not money and have no cash value.')}</p>${c && !c.enabled ? '<div class="alert warn small">The coin programme is paused right now.</div>' : ''}
-    <p class="small">Available: <b>${num(c?.available ?? c?.balance ?? 0)}</b>${Number(c?.held) ? ` · on hold (transfer request me): ${num(c.held)}` : ''}</p>
-    ${coinsLed.length ? `<table class="tbl">${coinsLed.map((l) => `<tr><td class="tiny">${fmtDate(l.created_at)}</td><td>${esc({ issue: 'Received', transfer_in: 'Received from another customer', transfer_out: 'Sent to another customer', reversal: 'Reversed', redeem: 'Redeemed', expire: 'Expired' }[l.kind] || l.kind)}<div class="tiny muted">${esc(l.note || '')}${l.expires_at ? ' · expires ' + fmtDate(l.expires_at, false) : ''}</div></td><td style="font-weight:700">${l.kind === 'issue' || l.kind === 'transfer_in' ? '+' : '−'}${num(l.coins)}</td></tr>`).join('')}</table>` : '<p class="small muted">No coins yet.</p>'}</div>
-    ${coinTransferCard(ct)}`;
+    ${coinRows.length ? `<ul class="wl-list">${coinRows.map(({ l, k }) => `<li class="wl-row"><span class="wl-ic" aria-hidden="true">${k.icon}</span><div class="wl-row-tx"><b>${esc(k.label)}</b><span class="tiny muted">${fmtDate(l.created_at)}${l.note ? ' · ' + esc(l.note) : ''}${l.expires_at ? ' · expires ' + fmtDate(l.expires_at, false) : ''}</span></div><b class="wl-amt-s ${k.sign === '+' ? 'pos' : 'neg'}">${k.sign}${num(l.coins)}</b></li>`).join('')}</ul>` : `<div class="wl-empty"><span aria-hidden="true">🪙</span><p class="small">Abhi koi coin nahi. Game khelo, dost ke saath share karo, ya order par coins use karo, sab yahan dikhega.</p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn sm" href="games.html">Play Games</a><a class="btn sec sm" href="products.html">Shop</a></div></div>`}</div>`;
   countUpWallet();
-  wireCoinTransfer();
   await appendShareEarnings();
+}
+
+// Coin history: one icon + plain label per kind of entry (classified from the ledger kind and its note; amounts are the server's)
+function coinKind(l) {
+  const n = String(l.note || '').toLowerCase(); const plus = l.kind === 'issue' || l.kind === 'transfer_in';
+  if (plus && /welcome/.test(n)) return { icon: '🎁', label: 'Welcome bonus', sign: '+' };
+  if (plus && /tap rush|game/.test(n)) return { icon: '🏆', label: 'Game prize', sign: '+' };
+  if (/share reward/.test(n)) return plus ? { icon: '🔗', label: 'Share reward', sign: '+' } : { icon: '🔗', label: 'Share reward reversed', sign: '−' };
+  if (l.kind === 'redeem') return { icon: '🛍️', label: 'Used at checkout', sign: '−' };
+  if (plus && /return|refund|cancel/.test(n)) return { icon: '↩️', label: 'Refund / returned', sign: '+' };
+  if (l.kind === 'reversal') return { icon: '↩️', label: 'Reversed', sign: '−' };
+  if (l.kind === 'transfer_in') return { icon: '📥', label: 'Received from a customer', sign: '+' };
+  if (l.kind === 'transfer_out') return { icon: '📤', label: 'Sent to a customer', sign: '−' };
+  if (l.kind === 'expire') return { icon: '⌛', label: 'Expired', sign: '−' };
+  return plus ? { icon: '🪙', label: 'Coins added', sign: '+' } : { icon: '🪙', label: 'Coins used', sign: '−' };
 }
 
 // count-up for the wallet numbers (skipped for reduced motion). Pure display: the numbers come from the server.
@@ -368,43 +388,12 @@ function countUpWallet() {
   if (creditEl) run(creditEl, (n) => '₹' + n.toLocaleString('en-IN'));
 }
 
-// ---------- coin transfers between customers: request -> admin approval (never instant) ----------
-const CT_ST = { pending: ['orange', 'Pending · admin approval ka intezar'], approved: ['green', 'Approved · coins bhej diye gaye'], rejected: ['red', 'Rejected'], cancelled: ['', 'Cancelled'] };
-function coinTransferCard(t) {
-  if (!t) return '<div class="card pad" style="margin-top:14px"><h3>🔁 Coins bhejein / Transfer coins</h3><p class="small muted">Abhi load nahi ho paya. Page refresh karein.</p></div>';
-  const L = t.limits || {}; const min = Number(L.min_coins) || 1; const max = Number(L.max_per_request) || 5000;
-  const rows = (t.requests || []).map((r) => {
-    const [tone, label] = CT_ST[r.status] || ['', r.status];
-    return `<tr><td class="tiny">${fmtDate(r.created_at)}</td><td><b>${num(r.coins)} coins</b><div class="tiny muted">Customer ${esc(r.receiver_customer_id)}${r.note ? ' · ' + esc(r.note) : ''}</div></td><td><span class="tag ${tone}">${esc(label)}</span>${r.decision_reason ? `<div class="tiny muted">${esc(r.decision_reason)}</div>` : ''}</td><td>${r.status === 'pending' ? `<button class="btn sec sm" data-ct-cancel="${esc(r.id)}">Cancel</button>` : ''}</td></tr>`;
-  }).join('');
-  return `<div class="card pad" style="margin-top:14px" id="ct-card"><h3>🔁 Coins bhejein / Transfer coins</h3>
-    <div class="alert small"><b>Admin ki manzoori ke baad hi coins milenge.</b> Request bhejte hi ye coins hold (rok) ho jaate hain, checkout me use nahi honge, jab tak admin approve ya reject na kare. Reject ya cancel par wapas available ho jaate hain.</div>
-    <p class="small">Available: <b>${num(t.available)}</b> coins${Number(t.held) ? ` · on hold: ${num(t.held)}` : ''}</p>
-    ${t.enabled === false ? '<div class="alert warn small">Coin transfer abhi band hai.</div>' : `<form id="ct-form" style="display:grid;gap:10px;margin-top:8px">
-      <div class="field"><label for="ct-to">Receiver ka Customer ID (SZC-XXXXXXXX)</label><input id="ct-to" maxlength="20" autocomplete="off" required placeholder="SZC-XXXXXXXX"></div>
-      <div class="field"><label for="ct-n">Kitne coins (${num(min)} se ${num(max)} tak)</label><input id="ct-n" type="number" inputmode="numeric" min="${min}" max="${max}" step="1" required></div>
-      <div class="field"><label for="ct-note">Note (optional)</label><input id="ct-note" maxlength="200"></div>
-      <p class="err" id="ct-err"></p><button class="btn" id="ct-send" type="submit">Request bhejein</button>
-      <p class="tiny muted">Ek din me ${num(L.daily_cap)} coins tak. Ek baar me ${num(L.max_pending)} tak pending requests.</p></form>`}
-    ${rows ? `<div class="tbl-wrap" style="box-shadow:none;margin-top:12px"><table class="tbl"><tr><th>Date</th><th>Coins</th><th>Status</th><th></th></tr>${rows}</table></div>` : '<p class="small muted" style="margin-top:10px">Abhi koi transfer request nahi.</p>'}
-    <p class="tiny muted" style="margin-top:12px">Coins sirf loyalty points hain. Inhe cash, UPI ya bank me withdraw ya paise me convert nahi kiya ja sakta. Kisi aur customer ko sirf admin-approved transfer se milte hain.</p></div>`;
-}
-function wireCoinTransfer() {
-  const f = $('#ct-form');
-  if (f) f.onsubmit = async (e) => { e.preventDefault(); const btn = $('#ct-send'); btn.disabled = true; $('#ct-err').textContent = '';
-    try { await api.rpc('coin_transfer_request', { p_receiver_code: $('#ct-to').value.trim().toUpperCase(), p_coins: Math.floor(Number($('#ct-n').value)), p_note: $('#ct-note').value.trim() || null, p_idempotency_key: idemKey('coin-transfer') });
-      clearIdem('coin-transfer'); toast('Request bhej di. Admin approve karega, tab coins jayenge.', 'ok'); await walletPage(); }
-    catch (x) { $('#ct-err').textContent = errText(x); btn.disabled = false; } };
-  $$('[data-ct-cancel]').forEach((b) => { b.onclick = async () => { const ok = await confirmBox('Request cancel karein?', 'Cancel hote hi coins hold se free ho jayenge.', { ok: 'Haan, cancel karein', danger: true }); if (!ok) return;
-    try { await api.rpc('coin_transfer_cancel', { p_id: Number(b.dataset.ctCancel) }); toast('Cancel ho gaya. Coins available hain.', 'ok'); await walletPage(); } catch (x) { toast(errText(x), 'bad'); } }; });
-}
-
 // My share earnings: rewards for products the customer shared (pending until delivered, then paid or reversed)
 const RW = { pending: 'Pending · delivery ke baad milega', paid: 'Paid · wallet me aa gaya', reversed: 'Reversed · order cancel/refund hua' };
 async function appendShareEarnings() {
   const sh = await api.rpc('my_referral_summary').catch(() => null); if (!sh || !sh.enabled && !(sh.rewards || []).length) return;
   const rows = (sh.rewards || []).map((r) => `<tr><td class="tiny">${fmtDate(r.created_at, false)}</td><td>${esc(r.product)}<div class="tiny muted">${esc(RW[r.status] || r.status)}${r.reverse_reason && r.status === 'reversed' ? ' · ' + esc(r.reverse_reason) : ''}</div></td><td style="font-weight:700">${num(r.coins)} coins</td></tr>`).join('');
-  $('#wb').insertAdjacentHTML('beforeend', `<div class="card pad" style="margin-top:14px"><h3>🔗 My share earnings</h3>
+  $('#wb').insertAdjacentHTML('beforeend', `<div class="card pad" style="margin-top:14px" id="share-earn"><h3>🔗 My share earnings</h3>
     <p class="small muted">Dost aapka share kiya SHOPZENT product kharide to aapko ${Number(sh.default_rate)}% tak coins milenge (product ka amount, admin product-wise 8% tak). Coins product <b>deliver</b> hone ke baad hi wallet me aate hain. Cancel, return ya refund hone par nahi milte. Apne aap ko share karne par nahi milega.</p>
     <div class="kpis" style="margin:10px 0"><div class="kpi"><b>${num(sh.pending_coins)}</b><span>Pending</span></div><div class="kpi"><b>${num(sh.paid_coins)}</b><span>Paid</span></div><div class="kpi"><b>${num(sh.reversed_coins)}</b><span>Reversed</span></div></div>
     <p class="tiny muted">Aapka share code: <code>${esc(sh.code || '')}</code> · Product page ke Share button se link bhejiye.</p>
