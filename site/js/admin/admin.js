@@ -8,7 +8,7 @@ const MOD = document.body.dataset.module;
 const NAV = [['Dashboard & orders', [['dashboard', '📊', 'Dashboard'], ['sales', '💰', 'Sales / Orders amount'], ['orders', '📦', 'Orders'], ['returns', '↩️', 'Returns & refunds']]],
   ['Shop', [['products', '🛍️', 'Products'], ['content', '🗂️', 'Categories & brands']]],
   ['Money & coins', [['payments', '💳', 'Payment verification'], ['coupons', '🎟️', 'Coupons'], ['wallet', '👛', 'Customer wallets'], ['coins', '🪙', 'Coins'], ['cointransfers', '🔁', 'Coin transfer requests'], ['referrals', '🔗', 'Share rewards'], ['game-winners', '🏆', 'Game winners']]],
-  ['Content', [['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
+  ['Content', [['festival', '🪔', 'Festival Studio'], ['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
   ['Settings & security', [['settings', '⚙️', 'Website settings'], ['domain', '🌐', 'Domain'], ['users', '👥', 'Users'], ['emailcheck', '📧', 'Email check'], ['reviews', '⭐', 'Reviews'], ['messages', '✉️', 'Messages'], ['security', '🛡️', 'Security & audit'], ['alerts', '🚨', 'Hacker alerts']]]];
 let ME = null, FACTOR = null;
 const DEMO_ADMIN_EMAIL = String(window.SHOPZENT_CONFIG?.DEMO_ADMIN?.email || '').trim().toLowerCase(); // preview mode: the only admin email accepted
@@ -574,6 +574,7 @@ const gwCompress = async (file) => {
   } finally { URL.revokeObjectURL(url); }
 };
 const gwPublic = async (file) => (await api.upload('public-media', new File([await gwCompress(file)], 'photo.jpg', { type: 'image/jpeg' }), 'settings/game-winners')).path;
+M.festival = async () => (await import('./festival-studio.js')).renderFestivalStudio({ main, head, call, ok, bad });
 M['game-winners'] = async () => {
   main().innerHTML = head('Game winners (Tap Rush)') + `<div class="alert small">Tap Rush: har hafte pehle 3 alag accounts jo <b>target score</b> tak pahunchein, unhe 1st/2nd/3rd prize coins milte hain (coins points hain, cash nahi). Winner ki photo aur naam <b>aap approve karoge</b>; tabhi game ke neeche dikhenge. Har action audit me jaata hai.</div>
   <div class="card pad" style="margin-bottom:14px"><h3 style="margin-top:0">Game settings</h3><div id="gw-set" class="row" style="gap:10px;flex-wrap:wrap">Loading…</div></div>
