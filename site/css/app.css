@@ -60,3 +60,5 @@
 .ad-slot:hover::after{transform:translateX(100%)}
 .ad-slot:active{transform:scale(.985)}
 @media (prefers-reduced-motion: reduce){.ad-slot,.ad-slot img,.ad-slot::after{animation:none;transition:none;transform:none!important}}
+
+.save-row{margin:4px 0 6px}.save-card{padding:4px 10px;font-size:.8rem;gap:4px}.save-card svg{width:16px;height:16px}
