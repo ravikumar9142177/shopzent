@@ -16,7 +16,7 @@ export async function home() {
       <a class="offer" href="deals.html" style="--c1:#F97316;--c2:#EC4899;--c3:#B4380F"><b>Best Deals</b><span class="s">Handpicked offers, checked by our team</span><span class="go">Shop deals →</span><span class="big" aria-hidden="true">💸</span></a>
       <a class="offer" href="trending.html" style="--c1:#7C3AED;--c2:#06B6D4;--c3:#4C1D95"><b>Trending Now</b><span class="s">What shoppers love this week</span><span class="go">See trending →</span><span class="big" aria-hidden="true">🔥</span></a>
       <a class="offer" href="offers.html" style="--c1:#EC4899;--c2:#A855F7;--c3:#86198F"><b>Coupons &amp; Offers</b><span class="s">Save more on every order</span><span class="go">Get coupons →</span><span class="big" aria-hidden="true">🎟️</span></a>
-      <a class="offer" href="products.html" style="--c1:#10B981;--c2:#06B6D4;--c3:#065F46"><b>All Products</b><span class="s">Saare products ek hi jagah, sab ek saath</span><span class="go">Saare products →</span><span class="big" aria-hidden="true">🛍️</span></a>
+      <a class="offer" href="products.html?type=direct" style="--c1:#10B981;--c2:#06B6D4;--c3:#065F46"><b>All Products</b><span class="s">Sirf SHOPZENT ke products, ek hi jagah</span><span class="go">Saare products →</span><span class="big" aria-hidden="true">🛍️</span></a>
       <a class="offer" href="wallet.html" style="--c1:#0EA5E9;--c2:#7C3AED;--c3:#1E3A8A"><b>Share &amp; Earn Coins</b><span class="s">Share our products, earn coins after delivery</span><span class="go">My wallet →</span><span class="big" aria-hidden="true">🪙</span></a>
     </div><div class="offer-dots" id="offer-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div></div>
     </div>
@@ -113,6 +113,7 @@ export async function listing(kind) {
   <p class="small muted" id="count" aria-live="polite"></p><div class="grid" id="list">${skeletonCards(8)}</div><div class="center" style="margin:20px 0"><button class="btn sec" id="more" hidden>Load more</button></div></div>`;
   if (kind === 'products') adSlot($('#ad-top'), 'products_top'); else $('#ad-top').remove();
   if (param('sort')) $('#f-sort').value = param('sort');
+  if (param('type') === 'direct') { $('#f-type').value = 'direct'; const h = $('.phead h1'); if (h && kind === 'products' && !cat && !br && !q) h.textContent = 'SHOPZENT Products'; }
   let all = [], shown = 24;
   const filters = { ...PUB, order: { col: 'created_at', asc: false }, limit: 500 };
   if (kind === 'trending') filters.eq = { ...filters.eq, is_trending: true }; if (kind === 'deals') filters.eq = { ...filters.eq, is_deal: true }; if (kind === 'featured') filters.eq = { ...filters.eq, is_featured: true };
