@@ -79,6 +79,27 @@ document.addEventListener('click', async (e) => {
 export async function adSlot(el, placement) { if (!el) return; try { const ads = (await api.select('ads', { eq: { placement }, order: { col: 'sort', asc: true }, limit: 3 })).filter((a) => a.image_url);
   if (!ads.length) { el.remove(); return; } el.innerHTML = ads.map((a) => `<a class="ad-slot" href="#" data-ad="${esc(a.id)}"><span class="lbl">AD</span><img loading="lazy" src="${esc(media(a.image_url))}" alt="${esc(a.title)}"></a>`).join('');
   ads.forEach((a) => api.rpc('track_ad', { p_ad_id: a.id, p_event: 'impression' }).catch(() => {})); } catch { el.remove(); } }
+// ---------- app look: tab bar pages, 3D tilt ----------
+const NO_TAB_BAR = ['checkout', 'payment', 'payment-submit', 'login', 'register', 'forgot', 'reset'];
+// Subtle 3D tilt on product and category cards: mouse/pen only, never with reduced motion or on touch screens (no gyroscope).
+// Sets --rx/--ry on the card; the CSS in css/app.css turns them into a transform. Delegated, so cards rendered later tilt too.
+let _tiltOn = false;
+export function initTilt() {
+  if (_tiltOn || typeof matchMedia !== 'function') return; _tiltOn = true;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  const SEL = '.pcard, .cat';
+  document.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    const el = e.target.closest?.(SEL); if (!el) return;
+    const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
+    const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+    el.style.setProperty('--rx', (-y * 7).toFixed(2) + 'deg'); el.style.setProperty('--ry', (x * 9).toFixed(2) + 'deg');
+  }, { passive: true });
+  document.addEventListener('pointerout', (e) => {
+    const el = e.target.closest?.(SEL); if (!el || (e.relatedTarget && el.contains(e.relatedTarget))) return;
+    el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg');
+  }, { passive: true });
+}
 // ---------- chrome ----------
 const NAV = [['index.html', 'Home'], ['products.html', 'All Products'], ['categories.html', 'Categories'], ['trending.html', 'Trending'], ['deals.html', 'Best Deals'], ['featured.html', 'Featured'], ['brands.html', 'Brands'], ['apps.html', 'Digital Apps'], ['apk.html', 'APK Downloads'], ['videos.html', 'Video Tutorials'], ['promo-videos.html', 'Promo Videos'], ['offers.html', 'Coupons & Offers']];
 // canonical + og:url: config SITE_URL, else the domain saved in Admin → Domain, else this site's own address
@@ -129,14 +150,18 @@ export async function chrome() {
     <p class="disclosure">SHOPZENT participates in affiliate marketing programs. Some links on this website are affiliate links. We may earn a commission from qualifying purchases made through these links, at no additional cost to you. Wallet balance and coins are SHOPZENT store credit / loyalty points only — not money, not a bank account and not withdrawable.</p>
     <div class="ftr-bottom"><span>© ${year} SHOPZENT. All rights reserved.</span><span><a href="${href('admin/index.html')}">🔐 Admin login</a></span></div></div>`;
   document.body.appendChild(f);
-  const bn = document.createElement('nav'); bn.className = 'bnav'; bn.setAttribute('aria-label', 'Quick');
-  bn.innerHTML = [['index.html', 'Home', IC.home], ['categories.html', 'Categories', IC.grid], ['offers.html', 'Offers', IC.tag], ['cart.html', 'Cart', IC.cart + '<span class="badge" data-cart-count></span>'], [p ? 'dashboard.html' : 'login.html', p ? 'Account' : 'Login', IC.user]].map(([h, l, i]) => `<a href="${href(h)}" class="${h === here ? 'active' : ''}">${i}<span>${l}</span></a>`).join('');
-  document.body.appendChild(bn);
+  // App-style bottom tab bar (phone). Hidden where it would get in the way: checkout, payment, login and account-recovery pages.
+  if (!NO_TAB_BAR.includes(page) && !here.startsWith('admin')) {
+    const bn = document.createElement('nav'); bn.className = 'bnav'; bn.setAttribute('aria-label', 'Quick');
+    bn.innerHTML = [['index.html', 'Home', IC.home], ['categories.html', 'Categories', IC.grid], ['wishlist.html', 'Saved', IC.heart], ['cart.html', 'Cart', IC.cart + '<span class="badge" data-cart-count></span>'], [p ? 'profile.html' : 'login.html', p ? 'Account' : 'Login', IC.user]]
+      .map(([h, l, i]) => `<a href="${href(h)}" class="${h === here || (h === 'profile.html' && here === 'dashboard.html') ? 'active' : ''}"${h === 'cart.html' ? ' data-tab="cart"' : ''}>${i}<span>${l}</span></a>`).join('');
+    document.body.appendChild(bn); document.body.classList.add('has-bnav');
+  }
   if (page !== 'payment' && page !== 'payment-submit') { const wa = document.createElement('a'); wa.className = 'wa-float'; wa.href = waLink(c.whatsapp, 'Hi SHOPZENT, I need help'); wa.target = '_blank'; wa.rel = 'noopener'; wa.setAttribute('aria-label', 'Chat on WhatsApp'); wa.innerHTML = IC.wa; document.body.appendChild(wa); }
   const dr = $('#drawer'); $('#menu-btn')?.addEventListener('click', () => { dr.classList.add('open'); dr.setAttribute('aria-hidden', 'false'); });
   dr.addEventListener('click', (e) => { if (e.target.closest('[data-close-drawer]') || e.target.closest('a[href]:not([data-logout])')) { dr.classList.remove('open'); dr.setAttribute('aria-hidden', 'true'); } });
   $$('[data-logout]').forEach((a) => a.addEventListener('click', async (e) => { e.preventDefault(); await api.auth.signOut(); resetProfile(); location.href = href('index.html'); }));
-  updateBadges(); reveal();
+  updateBadges(); reveal(); initTilt();
 }
 export async function requireLogin() { const p = await profile(); if (!p) { const here = location.pathname.split('/').pop() || 'index.html'; location.replace(href('login.html?next=' + encodeURIComponent(here === 'checkout.html' ? 'cart.html' : here + location.search))); throw new Error('redirect'); } return p; }
 

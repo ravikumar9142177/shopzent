@@ -1,0 +1,51 @@
+/* SHOPZENT app look (Nov 2026): phone bottom tab bar, hero motion, 3D tilt, press feedback.
+   Loaded after style.css on storefront pages. Everything motion-based is off under prefers-reduced-motion
+   (style.css already kills animations there; the rules below repeat the important ones). No libraries. */
+
+/* ---------- bottom tab bar (phone only; desktop uses the header) ---------- */
+.bnav{height:calc(64px + env(safe-area-inset-bottom));align-items:stretch;padding:0 6px env(safe-area-inset-bottom);background:rgba(255,255,255,.96);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-top:1px solid rgba(124,58,237,.10);box-shadow:0 -10px 30px rgba(17,12,40,.08)}
+.bnav a{justify-content:center;padding:8px 0 6px;min-width:0;border-radius:16px;margin:4px 2px 0;transition:color .2s,transform .15s,background .2s;-webkit-tap-highlight-color:transparent;font-weight:600;letter-spacing:.01em}
+.bnav a span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bnav a svg{transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.bnav a:active{transform:scale(.92)}
+.bnav a:active svg{transform:scale(.85)}
+.bnav a.active{color:var(--purple);background:linear-gradient(180deg,rgba(124,58,237,.10),rgba(236,72,153,.04))}
+.bnav a.active svg{transform:translateY(-2px) scale(1.06)}
+.bnav a.active::before{content:"";position:absolute;top:-7px;left:50%;width:26px;height:3px;margin-left:-13px;border-radius:0 0 4px 4px;background:var(--grad)}
+.bnav .badge{top:-2px;right:calc(50% - 20px);box-shadow:0 0 0 2px #fff;animation:szPop .35s cubic-bezier(.2,1.4,.4,1)}
+@keyframes szPop{from{transform:scale(.4)}to{transform:scale(1)}}
+@media(max-width:899px){
+  body.has-bnav{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+  body.has-bnav .wa-float{bottom:calc(84px + env(safe-area-inset-bottom))}
+  body.has-bnav .sticky-buy{bottom:calc(64px + env(safe-area-inset-bottom))}
+}
+
+/* ---------- hero: slow gradient drift + floating shapes (CSS only, no layout shift) ---------- */
+.hero::before{animation:spin 26s linear infinite}
+.hero-blob{position:absolute;z-index:0;border-radius:50%;pointer-events:none;filter:blur(1px);will-change:transform}
+.hero-blob.b1{width:150px;height:150px;top:-40px;right:-30px;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.55),rgba(255,255,255,0) 65%);animation:szFloat 9s ease-in-out infinite}
+.hero-blob.b2{width:84px;height:84px;bottom:18%;left:6%;background:linear-gradient(135deg,rgba(6,182,212,.7),rgba(124,58,237,.1));animation:szFloat 7s ease-in-out -2s infinite}
+.hero-blob.b3{width:46px;height:46px;top:28%;right:14%;border-radius:12px;transform:rotate(18deg);background:linear-gradient(135deg,rgba(249,115,22,.85),rgba(236,72,153,.2));animation:szFloat 6s ease-in-out -4s infinite}
+.hero-blob.b4{width:22px;height:22px;bottom:14%;right:34%;background:#fff;opacity:.6;animation:szFloat 5s ease-in-out -1s infinite}
+@keyframes szFloat{0%,100%{transform:translate3d(0,0,0) rotate(0deg)}50%{transform:translate3d(0,-14px,0) rotate(8deg)}}
+.hero .float-card{transform-style:preserve-3d;animation:szFloat 8s ease-in-out infinite}
+.hero .float-card{box-shadow:0 24px 60px rgba(0,0,0,.28)}
+
+/* ---------- 3D tilt (pointer devices; JS sets --rx/--ry, see layout.js initTilt) ---------- */
+.pcard,.cat{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .3s ease}
+.pcard:hover,.cat:hover{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-4px)}
+.pcard:hover{box-shadow:0 22px 40px -12px rgba(76,29,149,.28),0 2px 6px rgba(76,29,149,.08)}
+.pcard,.cat{box-shadow:0 1px 2px rgba(17,12,40,.05),0 8px 22px -10px rgba(76,29,149,.22)}
+.pcard .img img{transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.pcard:active,.cat:active{transform:scale(.97)}
+
+/* ---------- buttons: press feedback, no ripple ---------- */
+.btn{transition:transform .15s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background .2s,filter .2s}
+.btn:active{transform:scale(.96);filter:brightness(.96)}
+
+/* ---------- reduced motion: no drift, tilt or float ---------- */
+@media(prefers-reduced-motion:reduce){
+  .hero::before,.hero-blob,.hero .float-card,.float-card,.bnav .badge{animation:none!important}
+  .pcard,.cat,.pcard:hover,.cat:hover{transform:none!important;transition:none!important}
+  .pcard .img img{transition:none!important}
+}
