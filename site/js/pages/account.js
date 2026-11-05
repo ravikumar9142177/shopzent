@@ -2,6 +2,7 @@
 import { api, DEMO, config } from '../api.js';
 import { $, $$, esc, inr, num, param, toast, modal, confirmBox, errText, fmtDate, idemKey, clearIdem, checkFile, waLink, statusTag, statusLabel, safeUrl } from '../util.js';
 import { href, media, IC, cart, settings, profile, resetProfile, requireLogin, renderProducts, skeletonCards } from '../layout.js';
+import { attributionFor, wireReviewForms, reviewFormHtml } from '../share.js';
 const main = () => $('#main');
 const safeNext = (n) => (n && /^[\w\-./?=&%]+$/.test(n) && !n.startsWith('/') && !n.includes('//') && !n.includes(':')) ? n : 'dashboard.html';
 const strength = (pw) => { let s = 0; if (pw.length >= 10) s++; if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) s++; if (/\d/.test(pw)) s++; if (/[^\w]/.test(pw)) s++; if (pw.length >= 14) s++; return s; };
@@ -169,6 +170,10 @@ export async function checkout() {
       $('#phf').onsubmit = async (e) => { e.preventDefault(); $('#phe').textContent = ''; try { await api.rpc('update_my_profile', { p_full_name: (me.full_name || p.full_name || 'Customer').slice(0, 100), p_mobile: $('#ph').value.trim() }); location.reload(); } catch (x) { $('#phe').textContent = errText(x); } };
       return; } }
   const w = await api.rpc('my_wallet').catch(() => ({ available: 0 })); const last = JSON.parse(localStorage.getItem('sz_ship') || '{}');
+  // coins at checkout: internal points, own products only, at most max_percent of each line, 1 coin = rupee_per_coin
+  const cc = s.coins_checkout || {}; const coinRate = Number(cc.rupee_per_coin) > 0 ? Number(cc.rupee_per_coin) : 1; const coinPct = Number(cc.max_percent_per_line) > 0 ? Number(cc.max_percent_per_line) : 5;
+  const mcoins = cc.enabled === false ? null : await api.rpc('my_coins').catch(() => null); const coinBal = mcoins && mcoins.enabled !== false ? Math.max(0, Math.floor(Number(mcoins.balance) || 0)) : 0;
+  let coinsOn = false; let cur = { useW: 0, coinAlloc: [], coinRs: 0 };
   main().innerHTML = `<div class="phead"><div class="container"><div class="crumbs"><a href="cart.html">Cart</a> / Checkout</div><h1>Checkout</h1></div></div>
   <div class="container"><div class="steps"><span class="on">1 · Address</span><span class="on">2 · Coupon</span><span>3 · Pay by UPI</span><span>4 · Submit UTR</span></div></div>
   <div class="container layout2" style="padding-top:0"><form class="card pad" id="sf" novalidate><h3>Delivery address</h3><div class="form-grid">
@@ -181,14 +186,19 @@ export async function checkout() {
   <aside class="side"><div class="summary"><h3>Order summary</h3><div id="lines" class="small"></div>
     <div class="row" style="margin:10px 0;flex-wrap:nowrap"><input id="cc" placeholder="Coupon code" maxlength="30" style="text-transform:uppercase" aria-label="Coupon code"><button class="btn sec sm" id="ca" type="button">Apply</button></div><div id="cmsg" class="small" aria-live="polite"></div>
     ${w.available > 0 ? `<label class="small row" style="gap:8px;margin:8px 0"><input type="checkbox" id="uw"> Use store credit (${inr(w.available)} available)</label>` : ''}
-    <div id="tot"></div><p class="err" id="oe" role="alert"></p><button class="btn block" id="po">Place order & pay by UPI</button><p class="tiny muted center" style="margin-top:8px">Final amount is calculated and locked by our server.</p></div></aside></div>`;
+    <div id="cbox"></div><div id="tot"></div><p class="err" id="oe" role="alert"></p><button class="btn block" id="po">Place order & pay by UPI</button><p class="tiny muted center" style="margin-top:8px">Final amount is calculated and locked by our server.</p></div></aside></div>`;
   let coupon = sessionStorage.getItem('sz_coupon') || ''; $('#cc').value = coupon; let q = null;
   const recalc = async () => { try { q = await api.rpc('quote_cart', { p_items: items, p_coupon: coupon || null }); } catch (x) { $('#tot').innerHTML = `<div class="alert bad">${esc(errText(x))}</div>`; $('#po').disabled = true; return; }
     $('#lines').innerHTML = q.lines.map((l) => `<div class="row between" style="padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:nowrap"><span>${esc(l.name)} × ${l.qty}</span><span>${inr(l.line_total)}</span></div>`).join('');
     const cm = q.coupon; $('#cmsg').innerHTML = !cm ? '' : cm.valid ? `<span style="color:var(--ok);font-weight:600">✓ ${esc(cm.code)} applied — you save ${inr(q.coupon_discount)}</span> <a href="#" id="crm">remove</a>` : `<span style="color:var(--bad)">${esc(errText(cm.code_status))}</span>`;
     $('#crm')?.addEventListener('click', (e) => { e.preventDefault(); coupon = ''; $('#cc').value = ''; sessionStorage.removeItem('sz_coupon'); recalc(); });
-    const useW = $('#uw')?.checked ? Math.min(w.available, q.total) : 0;
-    $('#tot').innerHTML = `<div class="ln"><span>Subtotal (MRP-based price)</span><span>${inr(q.subtotal)}</span></div>${q.product_discount > 0 ? `<div class="ln" style="color:var(--ok)"><span>Product discount</span><span>−${inr(q.product_discount)}</span></div>` : ''}${q.coupon_discount > 0 ? `<div class="ln" style="color:var(--ok)"><span>Coupon (${esc(q.coupon.code)})</span><span>−${inr(q.coupon_discount)}</span></div>` : ''}${useW > 0 ? `<div class="ln" style="color:var(--ok)"><span>Store credit</span><span>−${inr(useW)}</span></div>` : ''}<div class="ln"><span>Delivery</span><span>Free</span></div><div class="ln total"><span>Pay by UPI</span><span>${inr(Math.max(0, q.total - useW))}</span></div>`;
+    // coins: fill each line up to its cap until the balance runs out (the server re-checks every number)
+    const coinAlloc = []; let coinRs = 0;
+    if (coinsOn && coinBal > 0) { let left = coinBal; for (const l of q.lines) { if (left <= 0) break; const cap = Math.floor(Number(l.line_total) * coinPct / 100 / coinRate); const give = Math.min(cap, left); if (give > 0) { coinAlloc.push({ product_id: l.product_id, size: l.size || '', coins: give, name: l.name }); left -= give; coinRs += give * coinRate; } } }
+    coinRs = Math.round(coinRs * 100) / 100; const useW = $('#uw')?.checked ? Math.max(0, Math.min(w.available, q.total - coinRs)) : 0; cur = { useW, coinAlloc, coinRs };
+    $('#cbox').innerHTML = coinBal > 0 ? `<label class="small row" style="gap:8px;margin:8px 0"><input type="checkbox" id="uc" ${coinsOn ? 'checked' : ''}> Coins use karein (${num(coinBal)} available) · har product ka max ${coinPct}%, 1 coin = ${inr(coinRate)}</label>${coinAlloc.length ? `<div class="tiny muted">${num(coinAlloc.reduce((a, c) => a + c.coins, 0))} coins = −${inr(coinRs)} (${coinAlloc.map((c) => esc(c.name) + ' ' + c.coins).join(', ')})</div>` : ''}` : '<div class="tiny muted">Coins: abhi balance 0 hai</div>';
+    $('#uc')?.addEventListener('change', (e) => { coinsOn = e.target.checked; recalc(); });
+    $('#tot').innerHTML = `<div class="ln"><span>Subtotal (MRP-based price)</span><span>${inr(q.subtotal)}</span></div>${q.product_discount > 0 ? `<div class="ln" style="color:var(--ok)"><span>Product discount</span><span>−${inr(q.product_discount)}</span></div>` : ''}${q.coupon_discount > 0 ? `<div class="ln" style="color:var(--ok)"><span>Coupon (${esc(q.coupon.code)})</span><span>−${inr(q.coupon_discount)}</span></div>` : ''}${coinRs > 0 ? `<div class="ln" style="color:var(--ok)"><span>Coins</span><span>−${inr(coinRs)}</span></div>` : ''}${useW > 0 ? `<div class="ln" style="color:var(--ok)"><span>Store credit</span><span>−${inr(useW)}</span></div>` : ''}<div class="ln"><span>Delivery</span><span>Free</span></div><div class="ln total"><span>Pay by UPI</span><span>${inr(Math.max(0, q.total - useW - coinRs))}</span></div>`;
     $('#po').disabled = false; };
   $('#ca').onclick = () => { coupon = $('#cc').value.trim().toUpperCase(); if (coupon) sessionStorage.setItem('sz_coupon', coupon); else sessionStorage.removeItem('sz_coupon'); recalc(); };
   $('#cc').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#ca').click(); } }); $('#uw')?.addEventListener('change', recalc);
@@ -197,7 +207,7 @@ export async function checkout() {
     const er = !ship.name ? 'Enter the receiver name.' : !/^[6-9]\d{9}$/.test(ship.phone) ? 'Enter a valid 10-digit mobile.' : !ship.line1 ? 'Enter the house / street.' : !ship.city || !ship.state ? 'Enter city and state.' : !/^\d{6}$/.test(ship.pincode) ? 'Enter a valid 6-digit pincode.' : !$('#agree').checked ? 'Please accept the terms to continue.' : '';
     if (er) { $('#oe').textContent = er; return; } if (q?.coupon && !q.coupon.valid) { $('#oe').textContent = 'Remove the invalid coupon first.'; return; }
     $('#po').disabled = true; $('#po').textContent = 'Placing order…';
-    try { const r = await api.rpc('create_order', { p_items: items, p_coupon: q?.coupon?.valid ? q.coupon.code : null, p_shipping: ship, p_use_wallet: $('#uw')?.checked ? Math.min(w.available, q.total) : 0, p_idempotency_key: idemKey('order') });
+    try { const r = await api.rpc('create_order', { p_items: items, p_coupon: q?.coupon?.valid ? q.coupon.code : null, p_shipping: ship, p_use_wallet: cur.useW, p_use_coins: cur.coinAlloc.length ? cur.coinAlloc.map((c) => ({ product_id: c.product_id, size: c.size, coins: c.coins })) : null, p_ref: attributionFor(items), p_idempotency_key: idemKey('order') });
       localStorage.setItem('sz_ship', JSON.stringify(ship)); cart.clear(); sessionStorage.removeItem('sz_coupon'); clearIdem('order'); location.href = r.status === 'payment_verified' ? `order.html?id=${r.order_id}&placed=1` : `payment.html?order=${r.order_id}`; }
     catch (x) { $('#oe').textContent = errText(x); $('#po').disabled = false; $('#po').textContent = 'Place order & pay by UPI'; } };
 }
@@ -266,11 +276,18 @@ export async function paymentSubmit() {
 }
 // ---------- orders ----------
 export async function orders() {
-  await requireLogin(); main().innerHTML = shell('My Orders', `<div class="pill-tabs" id="ot"></div><div id="ol">${skeletonCards(2)}</div>`); bindLogout();
-  const list = await api.select('orders', { order: { col: 'created_at', asc: false }, limit: 200 }); const groups = { All: () => true, 'To pay': (o) => ['payment_pending', 'payment_rejected'].includes(o.status), Verifying: (o) => ['payment_submitted', 'under_verification', 'payment_verified'].includes(o.status), Active: (o) => ['order_confirmed', 'processing', 'shipped'].includes(o.status), Delivered: (o) => o.status === 'delivered', Closed: (o) => /cancel|reject|refund|return/.test(o.status) };
+  await requireLogin(); main().innerHTML = shell('My Orders', `<div class="pill-tabs" id="ot"></div><div id="ol">${skeletonCards(2)}</div><div id="rvbox"></div>`); bindLogout();
+  const list = await api.select('orders', { order: { col: 'created_at', asc: false }, limit: 200 });
+  // delivered products without a review yet: 'Review likhein' (one review per product, after delivery only)
+  let rvHtml = ''; const dlv = list.filter((o) => o.status === 'delivered');
+  if (dlv.length) { const ids = new Set(dlv.map((o) => o.id)); const its = (await api.select('order_items', { limit: 500 }).catch(() => [])).filter((i) => ids.has(i.order_id));
+    const done = new Set((await api.rpc('my_reviews').catch(() => [])).map((m) => m.product_id)); const seen = new Set();
+    const rows = its.filter((i) => { if (done.has(i.product_id) || seen.has(i.product_id)) return false; seen.add(i.product_id); return true; });
+    if (rows.length) rvHtml = `<div class="card pad" style="margin-top:14px"><h3 style="margin-top:0">Delivered · review likhein</h3><p class="tiny muted">Jo product deliver ho gaya, uspar ek baar review likh sakte ho (1-5 stars).</p>${rows.map((i) => `<div style="padding:8px 0;border-top:1px solid var(--line)"><b class="small">${esc(i.product_name)}</b>${reviewFormHtml(i.product_id)}</div>`).join('')}</div>`; } const groups = { All: () => true, 'To pay': (o) => ['payment_pending', 'payment_rejected'].includes(o.status), Verifying: (o) => ['payment_submitted', 'under_verification', 'payment_verified'].includes(o.status), Active: (o) => ['order_confirmed', 'processing', 'shipped'].includes(o.status), Delivered: (o) => o.status === 'delivered', Closed: (o) => /cancel|reject|refund|return/.test(o.status) };
   const draw = (g) => { $$('#ot .chip').forEach((c) => c.classList.toggle('active', c.dataset.g === g)); const r = list.filter(groups[g]);
     $('#ol').innerHTML = r.map((o) => `<a class="card pad" href="order.html?id=${esc(o.id)}" style="display:block;color:inherit;margin-bottom:10px"><div class="row between"><b>${esc(o.order_code)}</b>${statusTag(o.status)}</div><div class="row between small muted" style="margin-top:6px"><span>${fmtDate(o.created_at)}</span><b style="color:var(--ink)">${inr(o.total)}</b></div>${['payment_pending', 'payment_rejected'].includes(o.status) ? '<span class="btn xs" style="margin-top:8px">Pay now →</span>' : ''}</a>`).join('') || `<div class="empty card"><img src="assets/img/empty.svg" alt=""><p>No orders here.</p><a class="btn sm" href="products.html">Shop now</a></div>`; };
   $('#ot').innerHTML = Object.keys(groups).map((g) => `<button class="chip" data-g="${g}">${g} (${list.filter(groups[g]).length})</button>`).join(''); $('#ot').onclick = (e) => { if (e.target.dataset.g) draw(e.target.dataset.g); }; draw('All');
+  $('#rvbox').innerHTML = rvHtml; wireReviewForms($('#rvbox'));
 }
 const FLOW = ['payment_pending', 'payment_submitted', 'payment_verified', 'order_confirmed', 'processing', 'shipped', 'delivered'];
 export async function orderDetail() {
@@ -314,6 +331,19 @@ export async function walletPage() {
     <div class="card pad"><h3>Wallet history</h3>${led.length ? `<div class="tbl-wrap" style="box-shadow:none"><table class="tbl"><tr><th>Date</th><th>Type</th><th>Amount</th><th>Ref</th></tr>${led.map((l) => `<tr><td class="tiny">${fmtDate(l.created_at)}</td><td>${esc(kindName[l.kind] || l.kind)}${l.status === 'pending' ? ' <span class="tag orange">pending</span>' : ''}<div class="tiny muted">${esc(l.note || '')}</div></td><td style="color:${l.direction === 'credit' ? 'var(--ok)' : 'var(--bad)'};font-weight:700;white-space:nowrap">${l.direction === 'credit' ? '+' : '−'}${inr(l.amount)}</td><td class="tiny"><code>${esc(l.txn_ref)}</code></td></tr>`).join('')}</table></div>` : '<p class="muted small">No wallet activity yet.</p>'}</div>
     <div class="card pad" style="margin-top:14px"><h3>🪙 Loyalty coins</h3><p class="small muted">${esc(c?.rules || 'Coins are loyalty points for SHOPZENT promotions. They are not money and have no cash value.')}</p>${c && !c.enabled ? '<div class="alert warn small">The coin programme is paused right now.</div>' : ''}
     ${coinsLed.length ? `<table class="tbl">${coinsLed.map((l) => `<tr><td class="tiny">${fmtDate(l.created_at)}</td><td>${esc({ issue: 'Received', reversal: 'Reversed', redeem: 'Redeemed', expire: 'Expired' }[l.kind] || l.kind)}<div class="tiny muted">${esc(l.note || '')}${l.expires_at ? ' · expires ' + fmtDate(l.expires_at, false) : ''}</div></td><td style="font-weight:700">${l.kind === 'issue' ? '+' : '−'}${num(l.coins)}</td></tr>`).join('')}</table>` : '<p class="small muted">No coins yet.</p>'}</div>`;
+  await appendShareEarnings();
+}
+
+// My share earnings: rewards for products the customer shared (pending until delivered, then paid or reversed)
+const RW = { pending: 'Pending · delivery ke baad milega', paid: 'Paid · wallet me aa gaya', reversed: 'Reversed · order cancel/refund hua' };
+async function appendShareEarnings() {
+  const sh = await api.rpc('my_referral_summary').catch(() => null); if (!sh || !sh.enabled && !(sh.rewards || []).length) return;
+  const rows = (sh.rewards || []).map((r) => `<tr><td class="tiny">${fmtDate(r.created_at, false)}</td><td>${esc(r.product)}<div class="tiny muted">${esc(RW[r.status] || r.status)}${r.reverse_reason && r.status === 'reversed' ? ' · ' + esc(r.reverse_reason) : ''}</div></td><td style="font-weight:700">${num(r.coins)} coins</td></tr>`).join('');
+  $('#wb').insertAdjacentHTML('beforeend', `<div class="card pad" style="margin-top:14px"><h3>🔗 My share earnings</h3>
+    <p class="small muted">Dost aapka share kiya SHOPZENT product kharide to aapko ${Number(sh.default_rate)}% tak coins milenge (product ka amount, admin product-wise 8% tak). Coins product <b>deliver</b> hone ke baad hi wallet me aate hain. Cancel, return ya refund hone par nahi milte. Apne aap ko share karne par nahi milega.</p>
+    <div class="kpis" style="margin:10px 0"><div class="kpi"><b>${num(sh.pending_coins)}</b><span>Pending</span></div><div class="kpi"><b>${num(sh.paid_coins)}</b><span>Paid</span></div><div class="kpi"><b>${num(sh.reversed_coins)}</b><span>Reversed</span></div></div>
+    <p class="tiny muted">Aapka share code: <code>${esc(sh.code || '')}</code> · Product page ke Share button se link bhejiye.</p>
+    ${rows ? `<table class="tbl">${rows}</table>` : '<p class="small muted">Abhi koi share reward nahi.</p>'}</div>`);
 }
 export async function wishlistPage() {
   await requireLogin(); main().innerHTML = shell('Wishlist', `<div class="grid" id="wl">${skeletonCards(4)}</div>`); bindLogout();

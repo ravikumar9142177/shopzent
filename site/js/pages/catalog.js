@@ -2,6 +2,7 @@
 import { api, DEMO } from '../api.js';
 import { $, $$, esc, inr, param, toast, safeUrl, debounce, sanitizeHtml, waLink, fmtDate, reveal } from '../util.js';
 import { href, media, IC, cart, settings, categories, brands, renderProducts, skeletonCards, decorate, productCard, wishlistIds, toggleWish, adSlot, openAffiliate, mktName, profile } from '../layout.js';
+import { captureRef, shareContext, shareBlockHtml, wireShare, loadReviews } from '../share.js';
 const main = () => $('#main');
 const PUB = { eq: { published: true } };
 
@@ -109,6 +110,7 @@ export async function product() {
   const slug = param('slug'); const p = slug && await api.select('products', { eq: { slug, published: true }, single: true });
   if (!p) { main().innerHTML = `<div class="container empty"><img src="assets/img/empty.svg" alt=""><h2>Product not found</h2><p>It may have been removed.</p><a class="btn" href="products.html">Browse products</a></div>`; return; }
   await decorate([p]); const s = await settings(); const w = await wishlistIds();
+  captureRef(p); const shc = await shareContext(p); const savedNow = w.has(p.id);
   document.title = `${p.seo_title || p.name} | SHOPZENT`; const md = $('meta[name=description]'); if (md) md.content = (p.seo_description || p.description || '').slice(0, 160);
   const imgs = (p.images || []).map(media).filter(Boolean); if (!imgs.length) imgs.push('assets/img/placeholder.svg');
   const aff = p.purchase_type === 'affiliate'; const hasLink = !aff || !!p.affiliate_url; const noPrice = p.price == null || p.price === ''; const ask = waLink(s.contact?.whatsapp, `Hi SHOPZENT, please share the price of ${p.name} (${p.product_code || ''})`); const oos = p.availability === 'out_of_stock' || p.availability === 'discontinued';
@@ -129,10 +131,11 @@ export async function product() {
     <p class="small"><b>Availability:</b> ${({ in_stock: '<span style="color:var(--ok)">In stock</span>', out_of_stock: '<span style="color:var(--bad)">Out of stock</span>', preorder: 'Pre-order', discontinued: 'Discontinued' })[p.availability] || ''} ${!aff && !noPrice && p.coupon_eligibility !== 'no' ? ' · <span class="tag green">Coupons accepted</span>' : ''}</p>
     ${sizeBlock}<div class="sticky-buy">${aff && hasLink ? `<button class="btn block" data-aff="${esc(p.id)}">Buy on ${esc(mktName(p.marketplace))} ${IC.ext}</button>` : (aff || noPrice) ? `<a class="btn block" href="${esc(ask)}" target="_blank" rel="noopener">Ask price on WhatsApp</a>` : oos ? '<button class="btn block" disabled>Out of stock</button>' : `<div class="qty" role="group" aria-label="Quantity"><button id="qminus" aria-label="Less">−</button><input id="qty" value="1" inputmode="numeric" aria-label="Quantity"><button id="qplus" aria-label="More">+</button></div><button class="btn grow" id="add">Add to cart</button><button class="btn dark" id="buy">Buy now</button>`}
       <button class="icon-btn wish ${w.has(p.id) ? 'on' : ''}" data-wish="${esc(p.id)}" aria-label="Wishlist" style="border:1.5px solid var(--line);border-radius:50%">${w.has(p.id) ? IC.heartF : IC.heart}</button></div>
-    ${aff && !hasLink ? '' : aff ? `<div class="alert" style="margin-top:10px">This is an affiliate product. You will buy it on ${esc(mktName(p.marketplace))}; the order, payment, delivery and returns are handled by ${esc(mktName(p.marketplace))}, not SHOPZENT. We may earn a small commission at no extra cost to you.</div>`
+    ${shareBlockHtml(p, shc, savedNow)}${aff && !hasLink ? '' : aff ? `<div class="alert" style="margin-top:10px">This is an affiliate product. You will buy it on ${esc(mktName(p.marketplace))}; the order, payment, delivery and returns are handled by ${esc(mktName(p.marketplace))}, not SHOPZENT. We may earn a small commission at no extra cost to you.</div>`
       : `<div class="card pad" style="margin-top:12px;font-size:.86rem"><div>🚚 ${esc(s.delivery?.estimate_text || 'Delivery estimate shown at checkout.')}</div><div style="margin-top:6px">↩️ ${esc(s.return_policy?.summary || '')} <a href="refund-policy.html">Policy</a></div><div style="margin-top:6px">💳 Pay by UPI. Your order is confirmed after our team verifies the payment.</div><div style="margin-top:6px">🏷️ Sold by ${esc(s.seller?.name || 'SHOPZENT')}</div></div>`}
     ${p.description ? `<h3 style="margin-top:20px">Description</h3><p style="white-space:pre-line">${esc(p.description)}</p>` : ''}
     ${specs.length ? `<h3>Specifications</h3><table class="specs">${specs.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>` : ''}
+    <div id="reviews"></div>
     <p class="tiny muted" style="margin-top:10px">Product ID: ${esc(p.product_code || p.id)}</p></div></div>
   <section class="sec" style="padding-top:0"><div class="sec-h"><h2>You may also like</h2></div><div class="scroller" id="related">${skeletonCards(4)}</div></section></div>`;
   $$('[data-img]').forEach((b) => b.onclick = () => { $('#g-main').src = b.dataset.img; $$('[data-img]').forEach((x) => x.classList.toggle('on', x === b)); });
@@ -143,6 +146,8 @@ export async function product() {
   const needSize = () => { if (sizesOn && !chosenSize) { toast('Pehle size chuniye 👕 (please pick a size first)', 'bad'); $('#size-msg')?.scrollIntoView({ block: 'center' }); return true; } return false; };
   $('#add')?.addEventListener('click', () => { if (needSize()) return; cart.add(p.id, qv(), chosenSize); toast('Added to cart 🛒', 'ok'); });
   $('#buy')?.addEventListener('click', () => { if (needSize()) return; cart.add(p.id, qv(), chosenSize); location.href = 'cart.html'; });
+  wireShare(p, shc); loadReviews(p, $('#reviews'));
+  $('.save-btn')?.addEventListener('click', async (e) => { const b = e.currentTarget; await toggleWish(p.id, null); const on = (await wishlistIds()).has(p.id); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.innerHTML = (on ? IC.heartF : IC.heart) + ` <span>${on ? 'Saved' : 'Save'}</span>`; });
   api.rpc('record_view', { p_product_id: p.id }).catch(() => {});
   let rel = []; try { rel = await api.select('products', p.category_id ? { ...PUB, eq: { published: true, category_id: p.category_id }, limit: 9 } : { ...PUB, order: { col: 'created_at', asc: false }, limit: 9 }); } catch {} await renderProducts($('#related'), rel.filter((x) => x.id !== p.id).slice(0, 8), 'More products coming soon.');
   // structured data — only verified facts (name, image, price for direct products)
