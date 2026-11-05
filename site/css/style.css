@@ -263,3 +263,12 @@ button,input,select,textarea{font-family:inherit}
 .size-chip.on{border-color:var(--purple);background:#F5F3FF;color:var(--purple)}
 .size-chip:disabled{opacity:.45;text-decoration:line-through;cursor:not-allowed}
 .size-chip small{font-size:.7rem;font-weight:500}
+
+/* admin sidebar: collapsible groups (one open at a time), like the storefront drawer */
+.adm-ag{margin:4px 0}
+.adm-ag-h{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;background:linear-gradient(180deg,#1f2937,#18212f);border:0;border-radius:12px;padding:11px 12px;color:#F1F5F9;font:700 .86rem/1.2 Poppins,system-ui,sans-serif;cursor:pointer;box-shadow:0 3px 0 #0b1120;text-align:left}
+.adm-ag-h i{font-style:normal;font-size:1.2rem;transition:transform .2s;color:#A5B4FC}
+.adm-ag.open .adm-ag-h i{transform:rotate(90deg)}
+.adm-ag-b{display:none;padding:4px 0 6px 6px}
+.adm-ag.open .adm-ag-b{display:block}
+.adm-ag-b a{margin:2px 0}
