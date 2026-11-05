@@ -127,3 +127,7 @@
 .drawer .dg.open .dg-b{display:block}
 .drawer .dg-b a{display:block;padding:10px 12px;border-radius:12px;font-weight:600;font-size:.92rem}
 .drawer .dg-b a:active{background:rgba(124,58,237,.1)}
+
+/* a11y/perf (PageSpeed): footer ghost button contrast, reserve page height to cut layout shift */
+.ftr .btn.ghost{color:#fff!important;border-color:rgba(255,255,255,.55)!important;background:rgba(255,255,255,.12)!important}
+#main{min-height:100vh}
