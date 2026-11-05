@@ -5,7 +5,7 @@ import { $, $$, esc, inr, num, param, toast, modal, confirmBox, errText, fmtDate
 import { href, media, IC } from '../layout.js';
 import { enrollMfa } from '../pages/account.js';
 const MOD = document.body.dataset.module;
-const NAV = [['Overview', [['dashboard', '📊', 'Dashboard'], ['orders', '📦', 'Orders'], ['payments', '💳', 'Payment verification'], ['returns', '↩️', 'Returns & refunds']]],
+const NAV = [['Overview', [['dashboard', '📊', 'Dashboard'], ['sales', '💰', 'Sales / Orders amount'], ['orders', '📦', 'Orders'], ['payments', '💳', 'Payment verification'], ['returns', '↩️', 'Returns & refunds']]],
   ['Catalogue', [['products', '🛍️', 'Products'], ['content', '🗂️', 'Categories & brands'], ['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
   ['Money & promos', [['coupons', '🎟️', 'Coupons'], ['wallet', '👛', 'Customer wallets'], ['coins', '🪙', 'Coins']]],
   ['Site & people', [['settings', '⚙️', 'Website settings'], ['domain', '🌐', 'Domain'], ['users', '👥', 'Users'], ['emailcheck', '📧', 'Email check'], ['messages', '✉️', 'Messages'], ['security', '🛡️', 'Security & audit'], ['alerts', '🚨', 'Hacker alerts']]]];
@@ -649,6 +649,47 @@ M.emailcheck = async () => {
   };
   $('#ec-all').onchange = loadList;
   await loadList().catch((x) => { $('#ec-list').innerHTML = `<div class="alert bad">${esc(errText(x))}</div>`; });
+};
+
+// ----- sales / orders amount (migration 0023: admin_sales_summary, read-only: no writes, no notices, no audit rows) -----
+const SL_WIN = [['today', 'Aaj', 'IST 12 baje se'], ['d7', 'Pichhle 7 din', 'Last 7 days'], ['d30', 'Pichhle 30 din', 'Last 30 days'], ['all', 'Sab time', 'All time']];
+M.sales = async () => {
+  main().innerHTML = head('Sales / Orders amount', '<button class="btn sec sm" id="sl-ref" type="button">Refresh</button>') + `
+  <div class="alert small">Sirf dekhne ke liye, ye page kuch change nahi karta. Rakam = order ka total (₹), ginti = orders ki.</div>
+  <div id="sl-out"><div class="sk" style="height:300px"></div></div>
+  <div class="card pad sl-help" style="margin-top:12px"><h3 style="margin:0 0 6px">Ye numbers kya hain (exact)</h3><ul class="small" style="padding-left:18px;margin:0">
+    <li><b>Total placed</b> (kul order): har order jo kabhi bana, kisi bhi status me. Rakam = order ka <code>total</code>, jaisa database me stored hai (discount aur wallet ke baad).</li>
+    <li><b>Confirmed</b> (✅ payment verified): admin ne payment verify kar diya, yani <code>payment_status = verified</code>, aur order cancel ya reject nahi hua.</li>
+    <li><b>Pending payment</b> (⏳): payment abhi verify nahi hua (<code>pending</code>, <code>submitted</code>, <code>under_verification</code>, ya <code>rejected</code> jo customer dobara bhej sakta hai), aur order cancel nahi hua.</li>
+    <li><b>Cancelled</b> (❌): order status <code>order_cancelled</code> ya <code>order_rejected</code>, payment chahe jo ho. Pehle verify hua ho to bhi yahin jata hai.</li>
+    <li>Confirmed + Pending + Cancelled = Total placed. Har order ek hi bucket me.</li>
+    <li><b>Samay</b>: Aaj = aaj 12:00 AM IST se. Pichhle 7 / 30 din = abhi se 7 / 30 × 24 ghante pehle tak (order banne ka time). Sab time = shuru se.</li>
+    <li>Returns aur refunds abhi minus nahi hote. Ye order ki value hai, cash ka hisab nahi.</li>
+  </ul></div>`;
+  const load = async () => {
+    const out = $('#sl-out'); out.innerHTML = '<div class="sk" style="height:300px"></div>';
+    try {
+      const s = await call('admin_sales_summary', {});
+      const W = s.windows || {};
+      const row = (k) => W[k] || { placed: {}, confirmed: {}, pending: {}, cancelled: {} };
+      const amt = (r, b) => Number(r[b]?.amount || 0);
+      const cnt = (r, b) => Number(r[b]?.count || 0);
+      const maxPlaced = Math.max(0, ...SL_WIN.map(([k]) => amt(row(k), 'placed')));
+      const pct = (a, t) => (t > 0 ? Math.max(0, Math.min(100, (Number(a) / t) * 100)) : 0);
+      const orders = (n) => `${num(n)} order${n === 1 ? '' : 's'}`;
+      const chart = SL_WIN.map(([k, lab]) => { const r = row(k); const P = amt(r, 'placed'); const seg = (b) => `<i class="sl-${b === 'confirmed' ? 'c' : b === 'pending' ? 'p' : 'x'}" style="height:${pct(amt(r, b), P)}%"></i>`;
+        return `<div class="sl-col"><small>${esc(inr(P))}</small><div class="sl-plot"><div class="sl-stack" style="height:${pct(P, maxPlaced)}%">${seg('confirmed')}${seg('pending')}${seg('cancelled')}</div></div><span>${esc(lab)}</span></div>`; }).join('');
+      const line = (r, b, label, cls) => `<div class="sl-row"><span><i class="sl-dot sl-${cls}"></i>${label}</span><b>${esc(inr(amt(r, b)))}</b><em>${orders(cnt(r, b))}</em></div>`;
+      const cards = SL_WIN.map(([k, lab, sub]) => { const r = row(k); const P = amt(r, 'placed');
+        return `<div class="card pad sl-card"><div class="sl-head"><h3 style="margin:0">${esc(lab)}</h3><span class="tiny muted">${esc(sub)}</span></div>
+          <div class="sl-total"><b>${esc(inr(P))}</b><span>Total placed · ${esc(orders(cnt(r, 'placed')))}</span></div>
+          <div class="sl-bar">${['confirmed', 'pending', 'cancelled'].map((b) => `<i class="sl-${b === 'confirmed' ? 'c' : b === 'pending' ? 'p' : 'x'}" style="width:${pct(amt(r, b), P)}%"></i>`).join('')}</div>
+          <div class="sl-rows">${line(r, 'confirmed', 'Confirmed (payment verified)', 'c')}${line(r, 'pending', 'Pending payment', 'p')}${line(r, 'cancelled', 'Cancelled', 'x')}</div></div>`; }).join('');
+      out.innerHTML = `<div class="card pad"><h3 style="margin:0 0 4px">Chart: order ki rakam</h3><p class="tiny muted" style="margin:0 0 8px">Bar ki height = total placed. Hara = confirmed, peela = pending, laal = cancelled.</p><div class="sl-chart">${chart}</div></div>${cards}<div class="tiny muted" style="margin-top:10px">Data ka time: ${esc(fmtDate(s.generated_at))}. Refresh karne par naya data aata hai.</div>`;
+    } catch (x) { out.innerHTML = `<div class="alert bad">${esc(errText(x))}</div>`; }
+  };
+  $('#sl-ref').onclick = load;
+  await load();
 };
 
 // ---------- boot ----------
