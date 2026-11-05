@@ -7,7 +7,7 @@ import { enrollMfa } from '../pages/account.js';
 const MOD = document.body.dataset.module;
 const NAV = [['Overview', [['dashboard', '📊', 'Dashboard'], ['sales', '💰', 'Sales / Orders amount'], ['orders', '📦', 'Orders'], ['payments', '💳', 'Payment verification'], ['returns', '↩️', 'Returns & refunds']]],
   ['Catalogue', [['products', '🛍️', 'Products'], ['content', '🗂️', 'Categories & brands'], ['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
-  ['Money & promos', [['coupons', '🎟️', 'Coupons'], ['wallet', '👛', 'Customer wallets'], ['coins', '🪙', 'Coins'], ['referrals', '🔗', 'Share rewards']]],
+  ['Money & promos', [['coupons', '🎟️', 'Coupons'], ['wallet', '👛', 'Customer wallets'], ['coins', '🪙', 'Coins'], ['cointransfers', '🔁', 'Coin transfer requests'], ['referrals', '🔗', 'Share rewards']]],
   ['Site & people', [['settings', '⚙️', 'Website settings'], ['domain', '🌐', 'Domain'], ['users', '👥', 'Users'], ['emailcheck', '📧', 'Email check'], ['reviews', '⭐', 'Reviews'], ['messages', '✉️', 'Messages'], ['security', '🛡️', 'Security & audit'], ['alerts', '🚨', 'Hacker alerts']]]];
 let ME = null, FACTOR = null;
 const DEMO_ADMIN_EMAIL = String(window.SHOPZENT_CONFIG?.DEMO_ADMIN?.email || '').trim().toLowerCase(); // preview mode: the only admin email accepted
@@ -56,6 +56,7 @@ function shell() {
   api.rpc('admin_site_status').then((s) => { const p = $('#site-pill'); if (!p) return; p.style.display = ''; p.className = 'tag ' + (s.published ? 'green' : 'red'); p.textContent = s.published ? '● LIVE' : '● CLOSED'; }).catch(() => {});
   api.rpc('admin_security_alert_counts').then((c) => { const a = document.querySelector('.adm-side a[href="alerts.html"]'); if (a && c.new_total) a.insertAdjacentHTML('beforeend', `<span class="tag ${c.new_high ? 'red' : 'pink'}" style="margin-left:auto">${c.new_total}</span>`); }).catch(() => {});
   api.rpc('admin_notifications').then((n) => { const u = n.filter((x) => !x.read_at).length; $('#nb').textContent = u || ''; $('#nb').dataset.n = u; }).catch(() => {});
+  api.rpc('admin_coin_transfer_pending_count').then((n) => { const a = document.querySelector('.adm-side a[href="cointransfers.html"]'); if (a && Number(n) > 0) a.insertAdjacentHTML('beforeend', `<span class="tag pink" style="margin-left:auto">${Number(n)}</span>`); }).catch(() => {});
 }
 // ---------- helpers ----------
 const ik = () => uuid();
@@ -618,6 +619,43 @@ async function ec_block(t, mode) {
   ok('Blocked ✓'); return true;
 }
 // ----- share rewards (migration 0022): reward list, reverse, settings -----
+// ---------- coin transfer requests (customer -> customer, admin approval; coins are points only) ----------
+const CTA_TONE = { pending: 'orange', approved: 'green', rejected: 'red', cancelled: '' };
+M.cointransfers = async () => {
+  main().innerHTML = head('Coin transfer requests') + `<div class="alert warn small"><b>Coins are points only.</b> Approve karne par sender ke coins kam hote hain aur receiver ko milte hain (ek hi baar). Coins kabhi cash, UPI ya bank me nahi jaate. Har action audit log me jata hai.</div>
+  <div class="card pad" style="margin-bottom:14px"><h3 style="margin-top:0">Transfer settings</h3><div id="cta-set" class="row" style="gap:10px;flex-wrap:wrap">Loading…</div></div>
+  <div class="card pad"><div class="row between" style="flex-wrap:wrap;gap:8px"><h3 style="margin:0">Requests <span class="tag pink" id="cta-pc"></span></h3><select id="cta-st" aria-label="Status"><option value="pending">Pending</option><option value="">All</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="cancelled">Cancelled</option></select></div><div id="cta-list" style="margin-top:10px">Loading…</div></div>`;
+  const drawSettings = (s = {}) => { $('#cta-set').innerHTML = `<label class="small row" style="gap:6px"><input type="checkbox" id="cta-en" ${s.enabled !== false ? 'checked' : ''}> On</label>
+    <label class="small">Min coins <input id="cta-min" type="number" min="1" max="1000" value="${Number(s.min_coins) || 1}" style="width:90px"></label>
+    <label class="small">Max per request <input id="cta-max" type="number" min="1" max="100000" value="${Number(s.max_per_request) || 5000}" style="width:110px"></label>
+    <label class="small">Max pending per sender <input id="cta-pend" type="number" min="1" max="20" value="${Number(s.max_pending) || 3}" style="width:80px"></label>
+    <label class="small">Daily cap per sender <input id="cta-cap" type="number" min="1" max="1000000" value="${Number(s.daily_cap) || 2000}" style="width:110px"></label>
+    <button class="btn sm" id="cta-save">Save settings</button>`;
+    $('#cta-save').onclick = async () => { try { await call('admin_set_coin_transfer_settings', { p_enabled: $('#cta-en').checked, p_min_coins: Number($('#cta-min').value), p_max_per_request: Number($('#cta-max').value), p_max_pending: Number($('#cta-pend').value), p_daily_cap: Number($('#cta-cap').value) }); ok('Settings saved ✓'); } catch (x) { bad(x); } }; };
+  const load = async () => {
+    let d; try { d = await call('admin_list_coin_transfers', { p_status: $('#cta-st').value || null, p_limit: 200 }); } catch (x) { return bad(x); }
+    drawSettings(d.settings); $('#cta-pc').textContent = `${d.pending_count || 0} pending`;
+    const rows = d.rows || [];
+    $('#cta-list').innerHTML = rows.length ? rows.map((r) => `<div class="card pad" style="box-shadow:none;border:1px solid var(--line);margin-bottom:8px">
+      <div class="row between"><b>${num(r.coins)} coins</b><span class="tag ${CTA_TONE[r.status] || ''}">${esc(r.status)}</span></div>
+      <div class="small">From <b>${esc(r.sender_customer_id)}</b> ${esc(r.sender_name || '')} → to <b>${esc(r.receiver_customer_id)}</b> ${esc(r.receiver_name || '')}</div>
+      <div class="tiny muted">Sender ka balance ${num(r.sender_balance)} · on hold ${num(r.sender_held)} · requested ${fmtDate(r.created_at)}${r.decided_at ? ' · decided ' + fmtDate(r.decided_at) : ''}</div>
+      ${r.note ? `<div class="tiny">Note: ${esc(r.note)}</div>` : ''}${r.decision_reason ? `<div class="tiny muted">Reason: ${esc(r.decision_reason)}</div>` : ''}
+      ${r.status === 'pending' ? `<div class="row" style="margin-top:8px;gap:8px"><button class="btn sm" data-cta-ok="${esc(r.id)}" data-c="${esc(r.coins)}" data-s="${esc(r.sender_customer_id)}" data-r="${esc(r.receiver_customer_id)}">Approve</button><button class="btn danger sm" data-cta-no="${esc(r.id)}">Reject</button></div>` : ''}
+      <div class="tiny muted" style="margin-top:4px">${esc(r.request_ref)}</div></div>`).join('') : '<div class="card pad empty">Is filter me koi request nahi.</div>';
+    $$('[data-cta-ok]').forEach((b) => { b.onclick = async () => {
+      const yes = await confirmBox('Transfer approve karein?', `${b.dataset.c} coins ${b.dataset.s} se ${b.dataset.r} ko jayenge. Ye wapas nahi hoga (sirf reversal se).`, { ok: 'Haan, approve & transfer' });
+      if (!yes) return;
+      try { await call('admin_approve_coin_transfer', { p_id: Number(b.dataset.ctaOk) }); ok('Coins transfer ho gaye ✓'); await load(); } catch (x) { bad(x); } }; });
+    $$('[data-cta-no]').forEach((b) => { b.onclick = async () => {
+      const reason = await confirmBox('Request reject karein?', 'Sender ke coins free ho jayenge. Reason sender ko dikhega.', { ok: 'Reject', danger: true, input: 'Reason (3+ characters)' });
+      if (!reason) return;
+      try { await call('admin_reject_coin_transfer', { p_id: Number(b.dataset.ctaNo), p_reason: reason }); ok('Rejected ✓'); await load(); } catch (x) { bad(x); } }; });
+  };
+  $('#cta-st').onchange = load;
+  await load();
+};
+
 M.referrals = async () => {
   main().innerHTML = head('Share rewards') + `<div class="alert small">Customer ne SHOPZENT ka product share kiya, dost ne kharida. Reward default <b>5%</b> (product par 8% tak). Coins <b>tabhi</b> milte hain jab order <b>DELIVERED</b> ho aur payment verified ho. Cancel, return ya refund par reverse ho jate hain. Apne aap ko share karne par nahi milta.</div>
   <div class="card pad" style="margin-bottom:14px"><h3 style="margin-top:0">Reward settings</h3><div id="rf-set" class="row" style="gap:10px;flex-wrap:wrap">Loading…</div></div>

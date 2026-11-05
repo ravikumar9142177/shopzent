@@ -172,7 +172,7 @@ export async function checkout() {
   const w = await api.rpc('my_wallet').catch(() => ({ available: 0 })); const last = JSON.parse(localStorage.getItem('sz_ship') || '{}');
   // coins at checkout: internal points, own products only, at most max_percent of each line, 1 coin = rupee_per_coin
   const cc = s.coins_checkout || {}; const coinRate = Number(cc.rupee_per_coin) > 0 ? Number(cc.rupee_per_coin) : 1; const coinPct = Number(cc.max_percent_per_line) > 0 ? Number(cc.max_percent_per_line) : 5;
-  const mcoins = cc.enabled === false ? null : await api.rpc('my_coins').catch(() => null); const coinBal = mcoins && mcoins.enabled !== false ? Math.max(0, Math.floor(Number(mcoins.balance) || 0)) : 0;
+  const mcoins = cc.enabled === false ? null : await api.rpc('my_coins').catch(() => null); const coinBal = mcoins && mcoins.enabled !== false ? Math.max(0, Math.floor(Number(mcoins.available ?? mcoins.balance) || 0)) : 0; // held coins (pending transfer) are not spendable
   let coinsOn = false; let cur = { useW: 0, coinAlloc: [], coinRs: 0 };
   main().innerHTML = `<div class="phead"><div class="container"><div class="crumbs"><a href="cart.html">Cart</a> / Checkout</div><h1>Checkout</h1></div></div>
   <div class="container"><div class="steps"><span class="on">1 · Address</span><span class="on">2 · Coupon</span><span>3 · Pay by UPI</span><span>4 · Submit UTR</span></div></div>
@@ -194,7 +194,7 @@ export async function checkout() {
     $('#crm')?.addEventListener('click', (e) => { e.preventDefault(); coupon = ''; $('#cc').value = ''; sessionStorage.removeItem('sz_coupon'); recalc(); });
     // coins: fill each line up to its cap until the balance runs out (the server re-checks every number)
     const coinAlloc = []; let coinRs = 0;
-    if (coinsOn && coinBal > 0) { let left = coinBal; for (const l of q.lines) { if (left <= 0) break; const cap = Math.floor(Number(l.line_total) * coinPct / 100 / coinRate); const give = Math.min(cap, left); if (give > 0) { coinAlloc.push({ product_id: l.product_id, size: l.size || '', coins: give, name: l.name }); left -= give; coinRs += give * coinRate; } } }
+    if (coinsOn && coinBal > 0) { let left = coinBal; for (const l of q.lines) { if (left <= 0) break; const capPaise = Math.floor(Math.round(Number(l.line_total) * 100) * coinPct / 100); const cap = Math.floor(capPaise / Math.round(coinRate * 100)); /* integer paise, same rule as the server */ const give = Math.min(cap, left); if (give > 0) { coinAlloc.push({ product_id: l.product_id, size: l.size || '', coins: give, name: l.name }); left -= give; coinRs += give * coinRate; } } }
     coinRs = Math.round(coinRs * 100) / 100; const useW = $('#uw')?.checked ? Math.max(0, Math.min(w.available, q.total - coinRs)) : 0; cur = { useW, coinAlloc, coinRs };
     $('#cbox').innerHTML = coinBal > 0 ? `<label class="small row" style="gap:8px;margin:8px 0"><input type="checkbox" id="uc" ${coinsOn ? 'checked' : ''}> Coins use karein (${num(coinBal)} available) · har product ka max ${coinPct}%, 1 coin = ${inr(coinRate)}</label>${coinAlloc.length ? `<div class="tiny muted">${num(coinAlloc.reduce((a, c) => a + c.coins, 0))} coins = −${inr(coinRs)} (${coinAlloc.map((c) => esc(c.name) + ' ' + c.coins).join(', ')})</div>` : ''}` : '<div class="tiny muted">Coins: abhi balance 0 hai</div>';
     $('#uc')?.addEventListener('change', (e) => { coinsOn = e.target.checked; recalc(); });
@@ -328,15 +328,49 @@ export async function walletPage() {
     return;
   }
   await requireLogin(); main().innerHTML = shell('Wallet & Coins', '<div id="wb">Loading…</div>'); bindLogout();
-  const [w, c, led, coinsLed] = await Promise.all([api.rpc('my_wallet'), api.rpc('my_coins').catch(() => null), api.select('wallet_ledger', { order: { col: 'created_at', asc: false }, limit: 200 }), api.select('coin_ledger', { order: { col: 'created_at', asc: false }, limit: 100 }).catch(() => [])]);
+  const [w, c, led, coinsLed, ct] = await Promise.all([api.rpc('my_wallet'), api.rpc('my_coins').catch(() => null), api.select('wallet_ledger', { order: { col: 'created_at', asc: false }, limit: 200 }), api.select('coin_ledger', { order: { col: 'created_at', asc: false }, limit: 100 }).catch(() => []), api.rpc('my_coin_transfers').catch(() => null)]);
   const kindName = { return_credit: 'Return credit', promo_credit: 'Promotional credit', admin_adjust: 'Adjustment', purchase_debit: 'Used on order', reversal: 'Reversal / returned', refund_credit: 'Refund as store credit' };
   $('#wb').innerHTML = `<div class="idcard"><div class="tiny" style="opacity:.85">SHOPZENT store credit</div><div style="font-size:2rem;font-weight:800">${inr(w.available)}</div><div class="row" style="gap:18px;margin-top:8px"><div><div class="tiny" style="opacity:.8">Wallet ID</div><code>${esc(w.wallet_id)}</code></div><div><div class="tiny" style="opacity:.8">Customer ID</div><code>${esc(w.customer_id)}</code></div></div></div>
     <div class="kpis" style="margin:14px 0"><div class="kpi"><b>${inr(w.total_credits)}</b><span>Total credits</span></div><div class="kpi"><b>${inr(w.total_debits)}</b><span>Total used</span></div><div class="kpi"><b>${inr(w.pending_credits)}</b><span>Pending credits</span></div><div class="kpi"><b>${num(c?.balance || 0)}</b><span>Loyalty coins</span></div></div>
     <div class="alert small">Store credit can be used only for eligible SHOPZENT purchases at checkout. It is <b>not</b> a bank account or money transfer service, cannot be withdrawn as cash and cannot be sent to other people. <a href="wallet-terms.html">Wallet & coins terms</a></div>
     <div class="card pad"><h3>Wallet history</h3>${led.length ? `<div class="tbl-wrap" style="box-shadow:none"><table class="tbl"><tr><th>Date</th><th>Type</th><th>Amount</th><th>Ref</th></tr>${led.map((l) => `<tr><td class="tiny">${fmtDate(l.created_at)}</td><td>${esc(kindName[l.kind] || l.kind)}${l.status === 'pending' ? ' <span class="tag orange">pending</span>' : ''}<div class="tiny muted">${esc(l.note || '')}</div></td><td style="color:${l.direction === 'credit' ? 'var(--ok)' : 'var(--bad)'};font-weight:700;white-space:nowrap">${l.direction === 'credit' ? '+' : '−'}${inr(l.amount)}</td><td class="tiny"><code>${esc(l.txn_ref)}</code></td></tr>`).join('')}</table></div>` : '<p class="muted small">No wallet activity yet.</p>'}</div>
     <div class="card pad" style="margin-top:14px"><h3>🪙 Loyalty coins</h3><p class="small muted">${esc(c?.rules || 'Coins are loyalty points for SHOPZENT promotions. They are not money and have no cash value.')}</p>${c && !c.enabled ? '<div class="alert warn small">The coin programme is paused right now.</div>' : ''}
-    ${coinsLed.length ? `<table class="tbl">${coinsLed.map((l) => `<tr><td class="tiny">${fmtDate(l.created_at)}</td><td>${esc({ issue: 'Received', reversal: 'Reversed', redeem: 'Redeemed', expire: 'Expired' }[l.kind] || l.kind)}<div class="tiny muted">${esc(l.note || '')}${l.expires_at ? ' · expires ' + fmtDate(l.expires_at, false) : ''}</div></td><td style="font-weight:700">${l.kind === 'issue' ? '+' : '−'}${num(l.coins)}</td></tr>`).join('')}</table>` : '<p class="small muted">No coins yet.</p>'}</div>`;
+    <p class="small">Available: <b>${num(c?.available ?? c?.balance ?? 0)}</b>${Number(c?.held) ? ` · on hold (transfer request me): ${num(c.held)}` : ''}</p>
+    ${coinsLed.length ? `<table class="tbl">${coinsLed.map((l) => `<tr><td class="tiny">${fmtDate(l.created_at)}</td><td>${esc({ issue: 'Received', transfer_in: 'Received from another customer', transfer_out: 'Sent to another customer', reversal: 'Reversed', redeem: 'Redeemed', expire: 'Expired' }[l.kind] || l.kind)}<div class="tiny muted">${esc(l.note || '')}${l.expires_at ? ' · expires ' + fmtDate(l.expires_at, false) : ''}</div></td><td style="font-weight:700">${l.kind === 'issue' || l.kind === 'transfer_in' ? '+' : '−'}${num(l.coins)}</td></tr>`).join('')}</table>` : '<p class="small muted">No coins yet.</p>'}</div>
+    ${coinTransferCard(ct)}`;
+  wireCoinTransfer();
   await appendShareEarnings();
+}
+
+// ---------- coin transfers between customers: request -> admin approval (never instant) ----------
+const CT_ST = { pending: ['orange', 'Pending · admin approval ka intezar'], approved: ['green', 'Approved · coins bhej diye gaye'], rejected: ['red', 'Rejected'], cancelled: ['', 'Cancelled'] };
+function coinTransferCard(t) {
+  if (!t) return '<div class="card pad" style="margin-top:14px"><h3>🔁 Coins bhejein / Transfer coins</h3><p class="small muted">Abhi load nahi ho paya. Page refresh karein.</p></div>';
+  const L = t.limits || {}; const min = Number(L.min_coins) || 1; const max = Number(L.max_per_request) || 5000;
+  const rows = (t.requests || []).map((r) => {
+    const [tone, label] = CT_ST[r.status] || ['', r.status];
+    return `<tr><td class="tiny">${fmtDate(r.created_at)}</td><td><b>${num(r.coins)} coins</b><div class="tiny muted">Customer ${esc(r.receiver_customer_id)}${r.note ? ' · ' + esc(r.note) : ''}</div></td><td><span class="tag ${tone}">${esc(label)}</span>${r.decision_reason ? `<div class="tiny muted">${esc(r.decision_reason)}</div>` : ''}</td><td>${r.status === 'pending' ? `<button class="btn sec sm" data-ct-cancel="${esc(r.id)}">Cancel</button>` : ''}</td></tr>`;
+  }).join('');
+  return `<div class="card pad" style="margin-top:14px" id="ct-card"><h3>🔁 Coins bhejein / Transfer coins</h3>
+    <div class="alert small"><b>Admin ki manzoori ke baad hi coins milenge.</b> Request bhejte hi ye coins hold (rok) ho jaate hain, checkout me use nahi honge, jab tak admin approve ya reject na kare. Reject ya cancel par wapas available ho jaate hain.</div>
+    <p class="small">Available: <b>${num(t.available)}</b> coins${Number(t.held) ? ` · on hold: ${num(t.held)}` : ''}</p>
+    ${t.enabled === false ? '<div class="alert warn small">Coin transfer abhi band hai.</div>' : `<form id="ct-form" style="display:grid;gap:10px;margin-top:8px">
+      <div class="field"><label for="ct-to">Receiver ka Customer ID (SZC-XXXXXXXX)</label><input id="ct-to" maxlength="20" autocomplete="off" required placeholder="SZC-XXXXXXXX"></div>
+      <div class="field"><label for="ct-n">Kitne coins (${num(min)} se ${num(max)} tak)</label><input id="ct-n" type="number" inputmode="numeric" min="${min}" max="${max}" step="1" required></div>
+      <div class="field"><label for="ct-note">Note (optional)</label><input id="ct-note" maxlength="200"></div>
+      <p class="err" id="ct-err"></p><button class="btn" id="ct-send" type="submit">Request bhejein</button>
+      <p class="tiny muted">Ek din me ${num(L.daily_cap)} coins tak. Ek baar me ${num(L.max_pending)} tak pending requests.</p></form>`}
+    ${rows ? `<div class="tbl-wrap" style="box-shadow:none;margin-top:12px"><table class="tbl"><tr><th>Date</th><th>Coins</th><th>Status</th><th></th></tr>${rows}</table></div>` : '<p class="small muted" style="margin-top:10px">Abhi koi transfer request nahi.</p>'}
+    <p class="tiny muted" style="margin-top:12px">Coins sirf loyalty points hain. Inhe cash, UPI ya bank me withdraw ya paise me convert nahi kiya ja sakta. Kisi aur customer ko sirf admin-approved transfer se milte hain.</p></div>`;
+}
+function wireCoinTransfer() {
+  const f = $('#ct-form');
+  if (f) f.onsubmit = async (e) => { e.preventDefault(); const btn = $('#ct-send'); btn.disabled = true; $('#ct-err').textContent = '';
+    try { await api.rpc('coin_transfer_request', { p_receiver_code: $('#ct-to').value.trim().toUpperCase(), p_coins: Math.floor(Number($('#ct-n').value)), p_note: $('#ct-note').value.trim() || null, p_idempotency_key: idemKey('coin-transfer') });
+      clearIdem('coin-transfer'); toast('Request bhej di. Admin approve karega, tab coins jayenge.', 'ok'); await walletPage(); }
+    catch (x) { $('#ct-err').textContent = errText(x); btn.disabled = false; } };
+  $$('[data-ct-cancel]').forEach((b) => { b.onclick = async () => { const ok = await confirmBox('Request cancel karein?', 'Cancel hote hi coins hold se free ho jayenge.', { ok: 'Haan, cancel karein', danger: true }); if (!ok) return;
+    try { await api.rpc('coin_transfer_cancel', { p_id: Number(b.dataset.ctCancel) }); toast('Cancel ho gaya. Coins available hain.', 'ok'); await walletPage(); } catch (x) { toast(errText(x), 'bad'); } }; });
 }
 
 // My share earnings: rewards for products the customer shared (pending until delivered, then paid or reversed)
