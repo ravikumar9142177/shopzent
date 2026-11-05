@@ -142,3 +142,13 @@
 
 .arc-tap{position:absolute;top:44%;left:0;right:0;text-align:center;color:#fde047;font:800 15px Poppins,system-ui,sans-serif;text-shadow:0 0 12px rgba(253,224,71,.7);pointer-events:none;animation:tr-glow 1.2s ease-in-out infinite alternate}
 .mm-card{aspect-ratio:4/5}
+
+/* 3D, animated play buttons (hub tiles and game start buttons) */
+.ht-play{background:linear-gradient(180deg,#fff7ae,#facc15 55%,#eab308);color:#1c1005;box-shadow:0 5px 0 #a16207,0 10px 18px rgba(250,204,21,.35);animation:ht-pulse 2.4s ease-in-out infinite;transition:transform .12s,box-shadow .12s}
+@keyframes ht-pulse{0%,100%{transform:translateY(0);box-shadow:0 5px 0 #a16207,0 0 0 rgba(250,204,21,0)}50%{transform:translateY(-2px);box-shadow:0 7px 0 #a16207,0 0 22px rgba(250,204,21,.75)}}
+.hub-tile:not(.soon):active .ht-play{transform:translateY(4px);box-shadow:0 1px 0 #a16207;animation:none}
+.tr-go{animation:tr-go-pulse 2.2s ease-in-out infinite}
+@keyframes tr-go-pulse{0%,100%{box-shadow:0 6px 0 #a16207,0 0 0 rgba(250,204,21,0)}50%{box-shadow:0 8px 0 #a16207,0 0 26px rgba(250,204,21,.8)}}
+.arc-stage .btn,.arc-over .btn{box-shadow:0 6px 0 #4c1d95,0 0 18px rgba(167,139,250,.5);transition:transform .12s}
+.arc-stage .btn:active,.arc-over .btn:active{transform:translateY(4px);box-shadow:0 1px 0 #4c1d95}
+@media (prefers-reduced-motion:reduce){.ht-play,.tr-go{animation:none}}

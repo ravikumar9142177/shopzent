@@ -83,7 +83,7 @@ export async function checkFile(file, kinds, maxMB) {
   if (!file) throw new Error('Please choose a file.');
   if (file.size > maxMB * 1024 * 1024) throw new Error(`File is too large (max ${maxMB} MB).`);
   const ext = (file.name.split('.').pop() || '').toLowerCase().replace('jpeg', 'jpg');
-  if (!kinds.includes(ext)) throw new Error(`Allowed file types: ${kinds.join(', ')}`);
+  if (kinds && !kinds.includes(ext)) throw new Error(`Allowed file types: ${kinds.join(', ')}`); // kinds = null: any file type (size is still checked)
   const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
   const sig = MAGIC[ext]; if (sig && !sig.every((b, i) => head[i] === b)) throw new Error('This file does not look like a real ' + ext.toUpperCase() + ' file.');
   if (ext === 'mp4' && !(head[4] === 0x66 && head[5] === 0x74 && head[6] === 0x79 && head[7] === 0x70)) throw new Error('This file does not look like a real MP4 video.');

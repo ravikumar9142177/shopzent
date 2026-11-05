@@ -16,8 +16,9 @@ export async function home() {
       <a class="offer" href="deals.html" style="--c1:#F97316;--c2:#EC4899;--c3:#B4380F"><b>Best Deals</b><span class="s">Handpicked offers, checked by our team</span><span class="go">Shop deals →</span><span class="big" aria-hidden="true">💸</span></a>
       <a class="offer" href="trending.html" style="--c1:#7C3AED;--c2:#06B6D4;--c3:#4C1D95"><b>Trending Now</b><span class="s">What shoppers love this week</span><span class="go">See trending →</span><span class="big" aria-hidden="true">🔥</span></a>
       <a class="offer" href="offers.html" style="--c1:#EC4899;--c2:#A855F7;--c3:#86198F"><b>Coupons &amp; Offers</b><span class="s">Save more on every order</span><span class="go">Get coupons →</span><span class="big" aria-hidden="true">🎟️</span></a>
+      <a class="offer" href="products.html" style="--c1:#10B981;--c2:#06B6D4;--c3:#065F46"><b>All Products</b><span class="s">Saare products ek hi jagah, sab ek saath</span><span class="go">Saare products →</span><span class="big" aria-hidden="true">🛍️</span></a>
       <a class="offer" href="wallet.html" style="--c1:#0EA5E9;--c2:#7C3AED;--c3:#1E3A8A"><b>Share &amp; Earn Coins</b><span class="s">Share our products, earn coins after delivery</span><span class="go">My wallet →</span><span class="big" aria-hidden="true">🪙</span></a>
-    </div><div class="offer-dots" id="offer-dots"><i class="on"></i><i></i><i></i><i></i></div></div>
+    </div><div class="offer-dots" id="offer-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div></div>
     </div>
     <div class="hero-art" aria-hidden="true"><div class="float-card"><picture><source srcset="assets/banners/categories-suraj.webp" type="image/webp"><img src="assets/banners/categories-suraj.jpg" alt="" style="border-radius:14px" width="1080" height="691"></picture></div></div>
   </div></section>
