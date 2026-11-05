@@ -217,6 +217,17 @@ export function mountFestival(cfg, opts = {}) {
   const wrap = document.createElement('div');
   wrap.className = 'fz' + (preview ? ' fz-prev' : '') + (reduce ? ' fz-rm' : '') + (cfg.intensity === 'high' ? ' fz-hi' : '');
   wrap.style.setProperty('--fz-a', accent); wrap.style.setProperty('--fz-b1', pal[1]); wrap.style.setProperty('--fz-b2', pal[2]);
+  // whole-site skin: re-colours the site's own variables, backdrop, cards and headings (undone on destroy)
+  let skinUndo = null, skinApply = null;
+  if (!preview && cfg.skin !== false) {
+    const de = document.documentElement, st = de.style;
+    const set = { '--purple': pal[1], '--pink': accent, '--orange': accent, '--fz-orn': JSON.stringify(F.icon || '✨'), '--fz-a': accent, '--fz-b1': pal[1], '--fz-b2': pal[2],
+      '--bg': `color-mix(in srgb, ${accent} 11%, #fffdf8)`, '--line': `color-mix(in srgb, ${accent} 30%, #fff)`,
+      '--grad': `linear-gradient(135deg, ${pal[2]} 0%, ${pal[1]} 55%, ${accent} 100%)`, '--grad3': `linear-gradient(135deg, ${pal[1]}, ${accent} 60%, ${pal[2]})`, '--grad2': `linear-gradient(135deg, ${pal[1]}, ${accent})` };
+    const prev = {}; let on = false;
+    skinApply = () => { if (on) return; on = true; Object.keys(set).forEach((k) => { prev[k] = st.getPropertyValue(k); st.setProperty(k, set[k]); }); de.classList.add('fz-skin'); };
+    skinUndo = () => { if (!on) { on = true; return; } de.classList.remove('fz-skin'); Object.keys(prev).forEach((k) => { prev[k] ? st.setProperty(k, prev[k]) : st.removeProperty(k); }); };
+  }
   const muted = !preview && localStorage.getItem(MUTE_KEY) === '1';
   const tuneOn = !preview && cfg.tune !== false && (!!F.tune || !!cfg.tune_url);
   wrap.innerHTML = `<div class="fz-band" aria-hidden="true">${decorHtml(L.decor)}</div>`;
@@ -242,7 +253,7 @@ export function mountFestival(cfg, opts = {}) {
     if (!preview) s.querySelector('.fz-x').addEventListener('click', () => { localStorage.setItem(DISMISS_KEY, String(cfg.version || '')); s.remove(); });
     wrap.appendChild(s);
   }
-  wrap.style.visibility = 'hidden'; root.appendChild(wrap); ensureCss().then(() => { wrap.style.visibility = ''; });
+  wrap.style.visibility = 'hidden'; root.appendChild(wrap); ensureCss().then(() => { wrap.style.visibility = ''; skinApply && skinApply(); });
   // the band hangs from the bottom edge of the sticky header (fixed, so it never moves the page)
   const hdr = document.querySelector('.hdr'); let raf2 = 0;
   const place = () => { raf2 = 0; if (!preview && hdr) wrap.style.setProperty('--fz-top', Math.round(hdr.getBoundingClientRect().bottom) + 'px'); };
@@ -252,5 +263,5 @@ export function mountFestival(cfg, opts = {}) {
   const onGesture = () => { ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.removeEventListener(e, onGesture, true)); if (muted || sessionStorage.getItem(TUNED_KEY) === '1') return; sessionStorage.setItem(TUNED_KEY, '1'); playAny(cfg); };
   if (!preview) { place(); window.addEventListener('scroll', onScroll, { passive: true }); window.addEventListener('resize', onResize, { passive: true }); }
   if (tuneOn && sessionStorage.getItem(TUNED_KEY) !== '1') ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.addEventListener(e, onGesture, { capture: true, passive: true }));
-  return { destroy() { if (CUSTOM && !preview) { CUSTOM.pause(); } fx && fx.stop(); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize); ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.removeEventListener(e, onGesture, true)); wrap.remove(); } };
+  return { destroy() { skinUndo && skinUndo(); if (CUSTOM && !preview) { CUSTOM.pause(); } fx && fx.stop(); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize); ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.removeEventListener(e, onGesture, true)); wrap.remove(); } };
 }
