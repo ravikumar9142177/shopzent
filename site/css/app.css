@@ -162,3 +162,7 @@
 @keyframes p3s{0%,55%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
 @media (min-width:700px){.price3d{grid-template-columns:repeat(4,1fr)}}
 @media (prefers-reduced-motion:reduce){.p3::after,.p3-ic{animation:none}.p3,.p3:nth-child(even){transform:none}}
+
+.cam-btn{border:0;background:transparent;color:var(--purple,#7C3AED);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;cursor:pointer;flex:none}
+.hdr .cam-btn{color:#fff}
+.vs-q{display:flex;gap:12px;align-items:center;margin-top:10px}.vs-q img{width:72px;height:72px;object-fit:cover;border-radius:14px;box-shadow:0 8px 16px -8px rgba(0,0,0,.4)}

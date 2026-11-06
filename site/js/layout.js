@@ -173,6 +173,7 @@ export async function chrome() {
   $$('[data-logout]').forEach((a) => a.addEventListener('click', async (e) => { e.preventDefault(); await api.auth.signOut(); resetProfile(); location.href = href('index.html'); }));
   updateBadges(); reveal(); initTilt();
   festivalHook(s, page);
+  import('./visualsearch.js').then((m) => m.initCameraSearch()).catch(() => {});
 }
 // Festival Studio (migration 0031/0032): the festival code loads only while a festival is on and inside its window, never on /admin/.
 function festivalHook(s, page) { try { const f = s.festival; if (!f || f.enabled !== true || location.pathname.includes('/admin/')) return;
