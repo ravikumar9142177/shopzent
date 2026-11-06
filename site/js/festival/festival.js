@@ -280,7 +280,7 @@ export function mountFestival(cfg, opts = {}) {
   let heroEl = null, chipEl = null;
   if (!preview && !opts.noStrip && /(^|\/)(index\.html)?$/.test(location.pathname) && cfg.hero !== false) {
     const mainEl = document.getElementById('main');
-    try { const hin = document.querySelector('.hdr-in'), lg = hin && hin.querySelector('.logo'); if (hin && lg && !hin.querySelector('.fz-hchip')) { chipEl = document.createElement('span'); chipEl.className = 'fz-hchip'; chipEl.setAttribute('aria-hidden', 'true'); chipEl.textContent = (F.icon || '✨') + ' ' + (title || F.name); lg.insertAdjacentElement('afterend', chipEl); } } catch {}
+    try { const hin = document.querySelector('.hdr-in'), lg = hin && hin.querySelector('.logo'); const sl = hin && hin.querySelector('.fz-hslot'); if (sl) { chipEl = sl; sl.classList.add('fz-hchip'); sl.setAttribute('aria-hidden', 'true'); sl.textContent = (F.icon || '✨') + ' ' + (title || F.name); } } catch {}
     if (mainEl && mainEl.parentNode) { heroEl = homeBanner(cfg, F, L, pal, accent, title, greet); heroEl.style.setProperty('--fz-a', accent); heroEl.style.setProperty('--fz-b1', pal[1]); heroEl.style.setProperty('--fz-b2', pal[2]); heroEl.style.display = 'none'; mainEl.parentNode.insertBefore(heroEl, mainEl); }
   }
   wrap.style.visibility = 'hidden'; root.appendChild(wrap); ensureCss().then(() => { wrap.style.visibility = ''; heroEl && (heroEl.style.display = ''); skinApply && skinApply(); });
@@ -293,5 +293,5 @@ export function mountFestival(cfg, opts = {}) {
   const onGesture = () => { ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.removeEventListener(e, onGesture, true)); if (muted || sessionStorage.getItem(TUNED_KEY) === '1') return; sessionStorage.setItem(TUNED_KEY, '1'); playAny(cfg); };
   if (!preview) { place(); window.addEventListener('scroll', onScroll, { passive: true }); window.addEventListener('resize', onResize, { passive: true }); }
   if (tuneOn && sessionStorage.getItem(TUNED_KEY) !== '1') ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.addEventListener(e, onGesture, { capture: true, passive: true }));
-  return { destroy() { skinUndo && skinUndo(); heroEl && heroEl.remove(); chipEl && chipEl.remove(); if (CUSTOM && !preview) { CUSTOM.pause(); } fx && fx.stop(); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize); ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.removeEventListener(e, onGesture, true)); wrap.remove(); } };
+  return { destroy() { skinUndo && skinUndo(); heroEl && heroEl.remove(); chipEl && (chipEl.textContent = '', chipEl.classList.remove('fz-hchip')); if (CUSTOM && !preview) { CUSTOM.pause(); } fx && fx.stop(); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize); ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.removeEventListener(e, onGesture, true)); wrap.remove(); } };
 }

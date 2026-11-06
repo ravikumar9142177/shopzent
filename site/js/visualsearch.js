@@ -31,13 +31,13 @@ async function catalog() {
 }
 export function initCameraSearch() {
   document.querySelectorAll('form.search').forEach((f) => {
-    if (f.querySelector('.cam-btn')) return;
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'cam-btn'; b.setAttribute('aria-label', 'Search with a photo');
-    b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+    let b = f.querySelector('.cam-btn');
+    if (!b) { b = document.createElement('button'); b.type = 'button'; b.className = 'cam-btn'; b.setAttribute('aria-label', 'Search with a photo'); b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'; const sub = f.querySelector('button:not(.cam-btn)'); f.insertBefore(b, sub || null); }
+    if (f.querySelector('input[type=file]')) return;
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.hidden = true;
     b.addEventListener('click', () => inp.click());
+    f.appendChild(inp);
     inp.addEventListener('change', () => { const file = inp.files[0]; inp.value = ''; if (file) run(file); });
-    const sub = f.querySelector('button:not(.cam-btn)'); f.insertBefore(b, sub || null); f.appendChild(inp);
   });
 }
 async function run(file) {
