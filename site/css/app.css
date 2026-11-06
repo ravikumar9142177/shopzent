@@ -147,3 +147,18 @@
 .brand-tile{background:linear-gradient(160deg,#fff,#f6f1ff)!important;box-shadow:0 12px 20px -12px rgba(76,29,149,.5),0 2px 0 #fff inset,0 -3px 0 rgba(124,58,237,.10) inset!important;transform:perspective(600px) rotateX(2deg);transition:transform .25s}
 .brand-tile:active{transform:perspective(600px) rotateX(2deg) scale(.97)}
 @media (prefers-reduced-motion:reduce){.empty3d{animation:none}}
+
+/* Shop by price: 3D cinematic cards */
+.price3d{display:grid;grid-template-columns:1fr 1fr;gap:12px;perspective:900px}
+.p3{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;min-height:128px;padding:14px;border-radius:20px;color:#fff;background:radial-gradient(circle at 80% 15%,rgba(255,255,255,.35),transparent 45%),linear-gradient(150deg,var(--c1),var(--c2));box-shadow:0 22px 30px -16px var(--c2),0 3px 0 rgba(255,255,255,.35) inset,0 -6px 0 rgba(0,0,0,.18) inset;transform:rotateX(4deg) rotateY(-4deg);transition:transform .3s,box-shadow .3s;text-decoration:none}
+.p3:nth-child(even){transform:rotateX(4deg) rotateY(4deg)}
+.p3::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.28) 50%,transparent 65%);transform:translateX(-120%);animation:p3s 4.5s ease-in-out infinite}
+.p3:nth-child(2)::after{animation-delay:1s}.p3:nth-child(3)::after{animation-delay:2s}.p3:nth-child(4)::after{animation-delay:3s}
+.p3:active{transform:scale(.96)}
+.p3-ic{position:absolute;right:10px;top:8px;font-style:normal;font-size:44px;filter:drop-shadow(0 8px 8px rgba(0,0,0,.4));animation:e3f 3.6s ease-in-out infinite}
+.p3 small{font-weight:700;letter-spacing:.18em;font-size:.68rem;opacity:.9}
+.p3 b{font-size:2.3rem;line-height:1.05;font-weight:900;text-shadow:0 4px 10px rgba(0,0,0,.35)}
+.p3 span{margin-top:4px;font-size:.8rem;font-weight:700;background:rgba(255,255,255,.22);align-self:flex-start;padding:3px 10px;border-radius:999px}
+@keyframes p3s{0%,55%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+@media (min-width:700px){.price3d{grid-template-columns:repeat(4,1fr)}}
+@media (prefers-reduced-motion:reduce){.p3::after,.p3-ic{animation:none}.p3,.p3:nth-child(even){transform:none}}

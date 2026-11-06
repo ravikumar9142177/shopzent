@@ -24,6 +24,7 @@ export async function home() {
   </div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><a href="games.html" class="games-card"><span class="gc-ic" aria-hidden="true">🎮</span><span class="gc-tx"><b>Games</b><span>Free games khelo, aur Tap Rush me is hafte ke 3 winners ko coins</span></span><span class="gc-go">Play →</span></a></div></section>
   <section class="sec reveal"><div class="container"><div class="sec-h"><div><span class="eyebrow">Shop by category</span><h2>Categories</h2></div><a href="categories.html">View all →</a></div><div class="cats" id="h-cats">${'<div class="sk" style="height:110px"></div>'.repeat(6)}</div></div></section>
+  <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Budget picks</span><h2>Shop by price</h2></div></div><div class="price3d">${[[99,0,'#22C55E','#065F46','🛍️'],[199,100,'#0EA5E9','#1E3A8A','🎁'],[299,200,'#A855F7','#4C1D95','✨'],[499,300,'#F97316','#9A3412','🔥']].map(([m, lo, c1, c2, ic]) => `<a class="p3" href="products.html?max=${m}&min=${lo}" style="--c1:${c1};--c2:${c2}"><i class="p3-ic" aria-hidden="true">${ic}</i><small>UNDER</small><b>₹${m}</b><span>Dekho →</span></a>`).join('')}</div></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><a class="promo-wide" href="categories.html" aria-label="Discover your next favourite — browse categories"><picture><source srcset="assets/banners/categories-suraj.webp" type="image/webp"><img loading="lazy" src="assets/banners/categories-suraj.jpg" alt="Discover your next favourite — Electronics, Home goods, Fashion, Beauty, Lifestyle, Accessories" width="1080" height="691"></picture></a></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Hot right now</span><h2>Trending products</h2></div><a href="trending.html">See all →</a></div><div class="scroller" id="h-trending">${skeletonCards(4)}</div></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="coupons one" id="h-coupons"></div></div></section>
@@ -102,7 +103,8 @@ export async function listing(kind) {
   const cats = await categories(), brs = await brands();
   const cs = param('category'), bs = param('brand'), q = (param('q') || '').slice(0, 80);
   const cat = cats.find((c) => c.slug === cs), br = brs.find((b) => b.slug === bs);
-  const heading = cat ? cat.name : br ? br.name : q ? `Results for “${q}”` : t;
+  const pmax = Number(param('max')) || 0, pmin = Number(param('min')) || 0;
+  const heading = pmax ? `Under ₹${pmax}` : cat ? cat.name : br ? br.name : q ? `Results for “${q}”` : t;
   main().innerHTML = `<div class="phead"><div class="container"><div class="crumbs"><a href="index.html">Home</a> / ${esc(heading)}</div><h1>${esc(heading)}</h1><p class="muted" style="margin:0">${esc(cat?.description || sub)}</p></div></div>
   <div class="container"><div id="ad-top" style="margin-top:14px"></div>
   <div class="toolbar" role="group" aria-label="Filters"><select id="f-cat" aria-label="Category"><option value="">All categories</option>${cats.map((c) => `<option value="${esc(c.slug)}" ${c.slug === cs ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
@@ -121,7 +123,7 @@ export async function listing(kind) {
   try { all = await api.select('products', filters); } catch (e) { $('#list').innerHTML = '<p class="err">Could not load products.</p>'; return; }
   await decorate(all);
   const draw = async () => { const fc = $('#f-cat').value, fb = $('#f-brand').value, ft = $('#f-type').value, so = $('#f-sort').value, st = $('#f-stock').checked;
-    let r = all.filter((p) => (!fc || p._cat?.slug === fc) && (!fb || brs.find((b) => b.id === p.brand_id)?.slug === fb) && (!ft || p.purchase_type === ft) && (!st || p.availability === 'in_stock'));
+    let r = all.filter((p) => (!pmax || (p.price != null && p.price <= pmax && p.price >= pmin)) && (!fc || p._cat?.slug === fc) && (!fb || brs.find((b) => b.id === p.brand_id)?.slug === fb) && (!ft || p.purchase_type === ft) && (!st || p.availability === 'in_stock'));
     if (q && !r.length) { const ql = q.toLowerCase(); r = all.filter((p) => (p._brand || '').toLowerCase().includes(ql) || (p._cat?.name || '').toLowerCase().includes(ql)); }
     const pr = (p) => p.price ?? Infinity; const disc = (p) => p.original_price && p.price ? (p.original_price - p.price) / p.original_price : 0;
     r.sort({ new: (a, b) => (b.created_at > a.created_at ? 1 : -1), popular: (a, b) => b.view_count - a.view_count || b.is_popular - a.is_popular, price_asc: (a, b) => pr(a) - pr(b), price_desc: (a, b) => (b.price ?? -1) - (a.price ?? -1), discount: (a, b) => disc(b) - disc(a) }[so]);
