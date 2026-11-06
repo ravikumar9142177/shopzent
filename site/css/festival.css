@@ -141,3 +141,8 @@ html.fz-skin .hdr .logo{background:#fff;border-radius:12px;padding:3px 8px;displ
 html.fz-skin .hdr .logo img{border-radius:8px;background:#fff}
 
 html.fz-skin .hdr{background:linear-gradient(90deg,#6d28d9,#7c3aed 50%,#6d28d9)!important;border-bottom:2px solid var(--fz-a)}
+
+/* header centre chip (fills the blank middle) + warmer header */
+html.fz-skin .hdr{background:linear-gradient(100deg,#5b21b6,#7c3aed 45%,#c026d3)!important}
+.fz-hchip{flex:1 1 auto;min-width:0;margin:0 8px;padding:7px 12px;border-radius:999px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:800 13px/1.2 system-ui,sans-serif;color:#4a1d00;background:linear-gradient(135deg,#fde68a,#fbbf24 55%,#f59e0b);box-shadow:0 3px 8px -3px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.7)}
+@media (min-width:900px){.fz-hchip{display:none}}
