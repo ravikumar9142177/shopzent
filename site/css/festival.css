@@ -124,3 +124,6 @@ html.fz-skin .hdr .search{background:rgba(255,255,255,.18)!important}
 html.fz-skin .hdr .search input,html.fz-skin .hdr .icon-btn{color:#fff!important}
 html.fz-skin .hdr .search input::placeholder{color:rgba(255,255,255,.85)!important}
 .fz-hero-s{position:absolute;z-index:2;font-size:26px;opacity:.9;animation:fzFloat 3.4s ease-in-out infinite;filter:drop-shadow(0 6px 8px rgba(0,0,0,.4))}
+
+.fz-hero-s{animation:none;opacity:.8;filter:none}
+.fz-rays{opacity:.5}
