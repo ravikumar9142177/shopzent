@@ -127,3 +127,12 @@ html.fz-skin .hdr .search input::placeholder{color:rgba(255,255,255,.85)!importa
 
 .fz-hero-s{animation:none;opacity:.8;filter:none}
 .fz-rays{opacity:.5}
+
+/* Round 3: calmer header (less yellow/dark), search bar + camera in their own colours */
+html.fz-skin .hdr{background:linear-gradient(90deg,var(--fz-b1),color-mix(in srgb,var(--fz-b1) 60%,#fff 0%) 50%,var(--fz-b1))!important;border-bottom:2px solid color-mix(in srgb,var(--fz-b1) 55%,#fff);box-shadow:0 4px 10px -6px rgba(0,0,0,.3)}
+html.fz-skin .hdr .search{background:#fff!important;border:0!important}
+html.fz-skin .hdr .search input{color:#1f2937!important}
+html.fz-skin .hdr .search input::placeholder{color:#6b7280!important}
+html.fz-skin .search .cam-btn,html.fz-skin .hdr .cam-btn{background:linear-gradient(135deg,#38bdf8,#2563eb)!important;color:#fff!important;width:32px;height:32px;margin-right:4px}
+html.fz-skin .search button:not(.cam-btn){background:linear-gradient(135deg,#8b5cf6,#6d28d9)!important;color:#fff!important}
+html.fz-skin .hero .search,html.fz-skin .search{box-shadow:0 4px 12px -6px rgba(0,0,0,.35)}
