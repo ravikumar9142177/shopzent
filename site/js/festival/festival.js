@@ -283,7 +283,7 @@ export function mountFestival(cfg, opts = {}) {
     try { const hin = document.querySelector('.hdr-in'), lg = hin && hin.querySelector('.logo'); const sl = hin && hin.querySelector('.fz-hslot'); if (sl) { chipEl = sl; sl.classList.add('fz-hchip'); sl.setAttribute('aria-hidden', 'true'); sl.textContent = (F.icon || '✨') + ' ' + (title || F.name); } } catch {}
     if (mainEl && mainEl.parentNode) { heroEl = homeBanner(cfg, F, L, pal, accent, title, greet); heroEl.style.setProperty('--fz-a', accent); heroEl.style.setProperty('--fz-b1', pal[1]); heroEl.style.setProperty('--fz-b2', pal[2]); heroEl.style.display = 'none'; mainEl.parentNode.insertBefore(heroEl, mainEl); }
   }
-  wrap.style.visibility = 'hidden'; root.appendChild(wrap); ensureCss().then(() => { wrap.style.visibility = ''; heroEl && (heroEl.style.display = ''); skinApply && skinApply(); });
+  wrap.style.visibility = 'hidden'; root.appendChild(wrap); ensureCss().then(() => { wrap.style.visibility = ''; heroEl && (heroEl.style.display = ''); document.querySelector('.fz-ph')?.remove(); skinApply && skinApply(); });
   // the band hangs from the bottom edge of the sticky header (fixed, so it never moves the page)
   const hdr = document.querySelector('.hdr'); let raf2 = 0;
   const place = () => { raf2 = 0; if (!preview && hdr) wrap.style.setProperty('--fz-top', Math.round(hdr.getBoundingClientRect().bottom) + 'px'); };

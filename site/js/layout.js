@@ -178,7 +178,8 @@ export async function chrome() {
 // Festival Studio (migration 0031/0032): the festival code loads only while a festival is on and inside its window, never on /admin/.
 function festivalHook(s, page) { try { const f = s.festival; if (!f || f.enabled !== true || location.pathname.includes('/admin/')) return;
   const now = Date.now(), a = f.starts_at ? Date.parse(f.starts_at) : 0, b = f.ends_at ? Date.parse(f.ends_at) : Infinity; if (!(now >= a && now < b) || f.theme === 'none') return;
-  import('./festival/festival.js').then((m) => m.mountFestival(f, { noStrip: NO_TAB_BAR.includes(page) })).catch(() => {}); } catch { /* the festival never breaks a page */ } }
+  if (page === 'index') { const mn = document.getElementById('main'); if (mn && mn.parentNode && !document.querySelector('.fz-ph')) { const ph = document.createElement('div'); ph.className = 'fz-ph'; ph.setAttribute('aria-hidden', 'true'); mn.parentNode.insertBefore(ph, mn); setTimeout(() => ph.remove(), 6000); } }
+  import('./festival/festival.js').then((m) => m.mountFestival(f, { noStrip: NO_TAB_BAR.includes(page) })).catch(() => { document.querySelector('.fz-ph')?.remove(); }); } catch { /* the festival never breaks a page */ } }
 export async function requireLogin() { const p = await profile(); if (!p) { const here = location.pathname.split('/').pop() || 'index.html'; location.replace(href('login.html?next=' + encodeURIComponent(here === 'checkout.html' ? 'cart.html' : here + location.search))); throw new Error('redirect'); } return p; }
 
 // Customer notification bell: unread count + the latest messages (order updates, "new update on the website" notices). Loads after the page, never blocks it.
