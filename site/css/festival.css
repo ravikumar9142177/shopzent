@@ -139,3 +139,5 @@ html.fz-skin .hero .search,html.fz-skin .search{box-shadow:0 4px 12px -6px rgba(
 
 html.fz-skin .hdr .logo{background:#fff;border-radius:12px;padding:3px 8px;display:inline-flex;align-items:center;box-shadow:0 2px 6px -2px rgba(0,0,0,.35)}
 html.fz-skin .hdr .logo img{border-radius:8px;background:#fff}
+
+html.fz-skin .hdr{background:linear-gradient(90deg,#6d28d9,#7c3aed 50%,#6d28d9)!important;border-bottom:2px solid var(--fz-a)}
