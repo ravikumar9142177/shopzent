@@ -136,3 +136,6 @@ html.fz-skin .hdr .search input::placeholder{color:#6b7280!important}
 html.fz-skin .search .cam-btn,html.fz-skin .hdr .cam-btn{background:linear-gradient(135deg,#38bdf8,#2563eb)!important;color:#fff!important;width:32px;height:32px;margin-right:4px}
 html.fz-skin .search button:not(.cam-btn){background:linear-gradient(135deg,#8b5cf6,#6d28d9)!important;color:#fff!important}
 html.fz-skin .hero .search,html.fz-skin .search{box-shadow:0 4px 12px -6px rgba(0,0,0,.35)}
+
+html.fz-skin .hdr .logo{background:#fff;border-radius:12px;padding:3px 8px;display:inline-flex;align-items:center;box-shadow:0 2px 6px -2px rgba(0,0,0,.35)}
+html.fz-skin .hdr .logo img{border-radius:8px;background:#fff}
