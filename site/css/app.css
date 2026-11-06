@@ -186,3 +186,13 @@
 .fz-hslot{flex:1 1 0;width:0;min-width:0;margin:0}
 
 .fz-ph{height:244px}
+
+/* Desktop / "desktop site" mode: tidy hero (image was huge, tilted and pushed the search down) */
+@media (min-width:900px){
+  .hero .hero-in{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);align-items:center;gap:32px;padding-top:28px;padding-bottom:28px}
+  .hero-art{display:block;max-width:460px;justify-self:end;width:100%}
+  .hero .float-card,.hero-art .float-card{animation:none!important;transform:none!important;padding:10px;max-height:300px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .hero .float-card img{width:100%;height:auto;max-height:280px;object-fit:cover;border-radius:14px;transform:none!important}
+  .hero .offer-slider{max-width:560px}
+  .container{max-width:1180px}
+}
