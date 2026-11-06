@@ -345,7 +345,7 @@ export async function walletPage() {
       <div class="wl-coin-card" role="group" aria-label="Loyalty coins">
         <span class="wl-shine" aria-hidden="true"></span>
         <div class="wl-coin3d" aria-hidden="true"><span>🪙</span></div>
-        <div class="wl-coin-tx"><span class="wl-lbl">Loyalty coins</span><b class="wl-count" id="wl-coins" data-val="${avail}">${num(avail)}</b><span class="tiny muted">${held ? `on hold: ${num(held)} · ` : ''}1 coin = ₹0.80 · paise nahi</span></div>
+        <div class="wl-coin-tx"><span class="wl-lbl">Loyalty coins</span><b class="wl-count" id="wl-coins" data-val="${avail}">${num(avail)}</b><span class="tiny muted">${held ? `on hold: ${num(held)} · ` : ''}1 coin = ₹0.80</span></div>
       </div>
     </div>
     <nav class="wl-quick" aria-label="Quick actions">
