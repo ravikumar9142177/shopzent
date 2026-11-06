@@ -200,6 +200,27 @@ let CUSTOM = null;
 export function playFile(url) { try { if (CUSTOM) { CUSTOM.pause(); } CUSTOM = new Audio(url); CUSTOM.volume = 0.35; CUSTOM.preload = 'auto'; const p = CUSTOM.play(); if (p && p.catch) p.catch(() => {}); return true; } catch (e) { return false; } }
 export function playAny(cfg) { return cfg.tune_url && /^https:\/\//.test(cfg.tune_url) ? playFile(cfg.tune_url) : playTune(cfg.theme); }
 
+
+// Home page: a big cinematic festival banner as the very first block under the header (hanging string lights, glowing rays, floating icon, title, greeting, offer, button)
+function lightsSvg(cols) {
+  let bulbs = '', path = 'M0 6 Q 50 34 100 6 T 200 6 T 300 6 T 400 6';
+  for (let i = 0; i < 16; i++) { const x = 12 + i * 25, k = i % 4; const y = 6 + 22 * Math.abs(Math.sin(((x % 100) / 100) * Math.PI)); const c = cols[i % cols.length];
+    bulbs += `<g class="fz-bulb" style="animation-delay:${(i * 0.23).toFixed(2)}s"><line x1="${x}" y1="${y - 4}" x2="${x}" y2="${y + 3}" stroke="#3a2a1a" stroke-width="1.4"/><ellipse cx="${x}" cy="${y + 9}" rx="5" ry="7" fill="${c}"/><ellipse cx="${x - 1.5}" cy="${y + 7}" rx="1.6" ry="2.6" fill="#fff" opacity=".7"/></g>`; }
+  return `<svg class="fz-lights" viewBox="0 0 400 48" preserveAspectRatio="none" aria-hidden="true"><path d="${path}" fill="none" stroke="#3a2a1a" stroke-width="1.6"/>${bulbs}</svg>`;
+}
+function homeBanner(cfg, F, L, pal, accent, title, greet) {
+  const off = cfg.offer || {}; const showOffer = !!off.enabled && !!(off.headline || off.text);
+  const link = String(off.link || '').trim(); const linkOk = /^https:\/\//.test(link) || /^[a-z0-9-]+\.html(\?|$)/.test(link);
+  const cols = [accent, pal[1], '#fde047', '#ffffff', pal[2]];
+  const el = document.createElement('section'); el.className = 'fz-hero'; el.setAttribute('aria-label', 'Festival');
+  el.innerHTML = `<div class="fz-hero-bg" aria-hidden="true"></div><div class="fz-rays" aria-hidden="true"></div>${lightsSvg(cols)}${lightsSvg(cols.slice().reverse()).replace('class="fz-lights"', 'class="fz-lights fz-lights2"')}
+  <div class="fz-hero-in"><div class="fz-hero-ic" aria-hidden="true">${esc(F.icon)}<i>${esc(F.icon)}</i><i>${esc(F.icon)}</i></div>
+  <h2 class="fz-hero-t">${esc(title || F.name)}</h2>${greet ? `<p class="fz-hero-g">${esc(greet)}</p>` : ''}
+  ${showOffer ? `<div class="fz-hero-o"><b>${esc(off.headline || '')}</b>${off.text ? `<span>${esc(off.text)}</span>` : ''}</div>` : ''}
+  <a class="fz-hero-btn" href="${linkOk ? esc(link) : 'products.html'}">Abhi shop karein &rarr;</a></div>`;
+  return el;
+}
+
 // ---------- mount ----------
 let cssP = null;
 // the stylesheet loads once; the band stays hidden until it has arrived (no unstyled flash, no layout shift)
@@ -244,7 +265,9 @@ export function mountFestival(cfg, opts = {}) {
   const off = cfg.offer || {}; const showOffer = !!off.enabled && !!(off.headline || off.text);
   const title = cfg.title || F.title, greet = cfg.greeting || F.greeting;
   const dismissed = !preview && localStorage.getItem(DISMISS_KEY) === String(cfg.version || '');
-  if (!opts.noStrip && (title || greet || showOffer) && !dismissed) {
+  const homeHero = !preview && /(^|\/)(index\.html)?$/.test(location.pathname) && cfg.hero !== false;
+  if (homeHero) wrap.classList.add('fz-has-hero');
+  if (!opts.noStrip && !homeHero && (title || greet || showOffer) && !dismissed) {
     const link = String(off.link || '').trim();
     const linkOk = /^https:\/\//.test(link) || /^[a-z0-9-]+\.html(\?|$)/.test(link);
     const code = String(off.code || '').trim();
@@ -253,7 +276,12 @@ export function mountFestival(cfg, opts = {}) {
     if (!preview) s.querySelector('.fz-x').addEventListener('click', () => { localStorage.setItem(DISMISS_KEY, String(cfg.version || '')); s.remove(); });
     wrap.appendChild(s);
   }
-  wrap.style.visibility = 'hidden'; root.appendChild(wrap); ensureCss().then(() => { wrap.style.visibility = ''; skinApply && skinApply(); });
+  let heroEl = null;
+  if (!preview && !opts.noStrip && /(^|\/)(index\.html)?$/.test(location.pathname) && cfg.hero !== false) {
+    const mainEl = document.getElementById('main');
+    if (mainEl && mainEl.parentNode) { heroEl = homeBanner(cfg, F, L, pal, accent, title, greet); heroEl.style.setProperty('--fz-a', accent); heroEl.style.setProperty('--fz-b1', pal[1]); heroEl.style.setProperty('--fz-b2', pal[2]); heroEl.style.display = 'none'; mainEl.parentNode.insertBefore(heroEl, mainEl); }
+  }
+  wrap.style.visibility = 'hidden'; root.appendChild(wrap); ensureCss().then(() => { wrap.style.visibility = ''; heroEl && (heroEl.style.display = ''); skinApply && skinApply(); });
   // the band hangs from the bottom edge of the sticky header (fixed, so it never moves the page)
   const hdr = document.querySelector('.hdr'); let raf2 = 0;
   const place = () => { raf2 = 0; if (!preview && hdr) wrap.style.setProperty('--fz-top', Math.round(hdr.getBoundingClientRect().bottom) + 'px'); };
@@ -263,5 +291,5 @@ export function mountFestival(cfg, opts = {}) {
   const onGesture = () => { ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.removeEventListener(e, onGesture, true)); if (muted || sessionStorage.getItem(TUNED_KEY) === '1') return; sessionStorage.setItem(TUNED_KEY, '1'); playAny(cfg); };
   if (!preview) { place(); window.addEventListener('scroll', onScroll, { passive: true }); window.addEventListener('resize', onResize, { passive: true }); }
   if (tuneOn && sessionStorage.getItem(TUNED_KEY) !== '1') ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.addEventListener(e, onGesture, { capture: true, passive: true }));
-  return { destroy() { skinUndo && skinUndo(); if (CUSTOM && !preview) { CUSTOM.pause(); } fx && fx.stop(); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize); ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.removeEventListener(e, onGesture, true)); wrap.remove(); } };
+  return { destroy() { skinUndo && skinUndo(); heroEl && heroEl.remove(); if (CUSTOM && !preview) { CUSTOM.pause(); } fx && fx.stop(); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize); ['pointerdown', 'touchstart', 'keydown', 'scroll'].forEach((e) => window.removeEventListener(e, onGesture, true)); wrap.remove(); } };
 }
