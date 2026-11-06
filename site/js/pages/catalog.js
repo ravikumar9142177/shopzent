@@ -65,8 +65,8 @@ export async function home() {
   $('#h-coupons').innerHTML = couponHint();
   featuredCoupon().then((html) => { if (!html) return; $('#h-coupons').innerHTML = html; const cb = $('#h-coupons [data-copy]'); if (cb) cb.onclick = () => navigator.clipboard?.writeText(cb.dataset.copy).then(() => toast('Copied ✓', 'ok')); });
   const br = await brands(); $('#h-brands').innerHTML = br.slice(0, 12).map((b) => `<a class="brand-tile" href="products.html?brand=${encodeURIComponent(b.slug)}">${b.logo_url ? `<img loading="lazy" decoding="async" src="${esc(media(b.logo_url))}" alt="${esc(b.name)}" style="max-height:44px">` : esc(b.name)}</a>`).join('');
-  const vids = await api.select('videos', { ...PUB, order: { col: 'sort', asc: true }, limit: 4 }); $('#h-videos').innerHTML = vids.map(videoCard).join('') || '<p class="muted">Videos coming soon.</p>';
-  const apps = await api.select('apps', { ...PUB, order: { col: 'updated_at', asc: false }, limit: 3 }); $('#h-apps').innerHTML = apps.map(appCard).join('') || '<p class="muted">Apps coming soon.</p>';
+  const vids = await api.select('videos', { ...PUB, order: { col: 'sort', asc: true }, limit: 4 }); $('#h-videos').innerHTML = vids.map(videoCard).join('') || `<div class="empty3d"><span class="e3-ic" aria-hidden="true">🎬</span><b>Videos jaldi aa rahe hain</b><span>Naye product videos yahin milenge</span><a class="btn sm" href="products.html">Shop karein</a></div>`;
+  const apps = await api.select('apps', { ...PUB, order: { col: 'updated_at', asc: false }, limit: 3 }); $('#h-apps').innerHTML = apps.map(appCard).join('') || `<div class="empty3d"><span class="e3-ic" aria-hidden="true">📲</span><b>Apps jaldi aa rahe hain</b><span>Naye apps yahin milenge</span><a class="btn sm" href="products.html">Shop karein</a></div>`;
   adSlot($('#h-ad-mid'), 'home_mid');
   $('#nl').addEventListener('submit', async (e) => { e.preventDefault(); const em = e.target.email.value.trim(); try { await api.rpc('subscribe_newsletter', { p_email: em }); $('#nl-msg').textContent = 'Thanks! You are subscribed ✓'; e.target.reset(); } catch { $('#nl-msg').textContent = 'Please enter a valid email.'; } });
 }

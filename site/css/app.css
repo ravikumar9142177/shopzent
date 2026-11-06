@@ -138,3 +138,12 @@
 .gc-tx{flex:1;display:flex;flex-direction:column}
 .gc-tx b{font-size:17px}.gc-tx span{opacity:.85;font-size:14px}
 .gc-go{font-weight:800;color:#fde047;white-space:nowrap}
+
+/* 3D empty-state cards (replace blank "coming soon" lines) and 3D brand tiles */
+.empty3d{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 16px;text-align:center;border-radius:20px;background:linear-gradient(160deg,#fff,#f5f0ff);box-shadow:0 18px 30px -16px rgba(76,29,149,.45),0 3px 0 #fff inset,0 -4px 0 rgba(124,58,237,.12) inset;transform:perspective(700px) rotateX(3deg);animation:e3f 4s ease-in-out infinite}
+.e3-ic{display:grid;place-items:center;width:58px;height:58px;border-radius:18px;font-size:30px;background:linear-gradient(145deg,#fde68a,#f9a8d4);box-shadow:0 10px 18px -6px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.7)}
+.empty3d b{font-size:1rem}.empty3d span:not(.e3-ic){font-size:.82rem;color:#6B7280}
+@keyframes e3f{50%{transform:perspective(700px) rotateX(3deg) translateY(-4px)}}
+.brand-tile{background:linear-gradient(160deg,#fff,#f6f1ff)!important;box-shadow:0 12px 20px -12px rgba(76,29,149,.5),0 2px 0 #fff inset,0 -3px 0 rgba(124,58,237,.10) inset!important;transform:perspective(600px) rotateX(2deg);transition:transform .25s}
+.brand-tile:active{transform:perspective(600px) rotateX(2deg) scale(.97)}
+@media (prefers-reduced-motion:reduce){.empty3d{animation:none}}
