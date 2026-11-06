@@ -117,3 +117,10 @@ html.fz-skin .footer,html.fz-skin footer{border-top:4px solid var(--fz-a)}
 .fz-hero-o{flex-direction:row;align-items:center;gap:8px;margin:0 0 8px;padding:5px 12px;border-radius:999px}.fz-hero-o b{font-size:.95rem}.fz-hero-o span{font-size:.78rem}
 .fz-hero-btn{padding:8px 20px;font-size:.88rem}
 .fz-rays{width:420px;height:420px;margin:-210px 0 0 -210px}
+
+/* header keeps its dark look (white text/icons must stay readable) */
+html.fz-skin .hdr{background:linear-gradient(90deg,var(--fz-b2),var(--fz-b1) 50%,var(--fz-b2))!important;border-bottom:3px solid var(--fz-a);box-shadow:0 6px 18px color-mix(in srgb,var(--fz-b1) 35%,transparent)}
+html.fz-skin .hdr .search{background:rgba(255,255,255,.18)!important}
+html.fz-skin .hdr .search input,html.fz-skin .hdr .icon-btn{color:#fff!important}
+html.fz-skin .hdr .search input::placeholder{color:rgba(255,255,255,.85)!important}
+.fz-hero-s{position:absolute;z-index:2;font-size:26px;opacity:.9;animation:fzFloat 3.4s ease-in-out infinite;filter:drop-shadow(0 6px 8px rgba(0,0,0,.4))}

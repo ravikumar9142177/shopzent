@@ -215,6 +215,7 @@ function homeBanner(cfg, F, L, pal, accent, title, greet) {
   const el = document.createElement('section'); el.className = 'fz-hero'; el.setAttribute('aria-label', 'Festival');
   el.innerHTML = `<div class="fz-hero-bg" aria-hidden="true"></div><div class="fz-rays" aria-hidden="true"></div>${lightsSvg(cols)}${lightsSvg(cols.slice().reverse()).replace('class="fz-lights"', 'class="fz-lights fz-lights2"')}
   <div class="fz-hero-in"><div class="fz-hero-ic" aria-hidden="true">${esc(F.icon)}<i>${esc(F.icon)}</i><i>${esc(F.icon)}</i></div>
+  <span class="fz-hero-s" style="left:8%;top:62px" aria-hidden="true">${esc(F.icon)}</span><span class="fz-hero-s" style="right:8%;top:62px;animation-delay:.8s" aria-hidden="true">${esc(F.icon)}</span><span class="fz-hero-s" style="left:3%;top:118px;font-size:18px;animation-delay:1.4s" aria-hidden="true">${esc(F.icon)}</span><span class="fz-hero-s" style="right:3%;top:118px;font-size:18px;animation-delay:.3s" aria-hidden="true">${esc(F.icon)}</span>
   <h2 class="fz-hero-t">${esc(title || F.name)}</h2>${greet ? `<p class="fz-hero-g">${esc(greet)}</p>` : ''}
   ${showOffer ? `<div class="fz-hero-o"><b>${esc(off.headline || '')}</b>${off.text ? `<span>${esc(off.text)}</span>` : ''}</div>` : ''}
   <a class="fz-hero-btn" href="${linkOk ? esc(link) : 'products.html'}">Abhi shop karein &rarr;</a></div>`;
