@@ -62,3 +62,5 @@
 @media(prefers-reduced-motion:reduce){.wl-qa,.wl-qa:hover{transition:none;transform:none}}
 .wl-tbl .wl-ic{width:26px;height:26px;border-radius:9px;font-size:14px;margin-right:6px;box-shadow:none;background:#f5f0ff}
 .wl-tbl td{vertical-align:top}
+
+@keyframes wl-spin{0%,100%{transform:rotateY(-6deg) rotateX(2deg)}50%{transform:rotateY(6deg) rotateX(-2deg)}}

@@ -175,3 +175,10 @@
 .brand-tile{transform:none!important;box-shadow:0 6px 12px -8px rgba(76,29,149,.35)!important}
 .ad-slot:hover{transform:translateY(-2px);box-shadow:0 12px 20px -14px rgba(76,29,149,.4)}
 .ad-slot::after{display:none}
+
+/* Toned-down 3D, round 2 */
+.offer,.offer:active{transform:none}
+.offer:active{transform:scale(.98)}
+.ad-slot{animation:none;perspective:none;transform-style:flat}
+.ad-slot:hover{transform:none;box-shadow:var(--sh)}
+.pcard,.cat{box-shadow:0 4px 10px -6px rgba(76,29,149,.25)}
