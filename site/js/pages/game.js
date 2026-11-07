@@ -204,8 +204,8 @@ export async function gamePage() {
     overlay('<div class="tr-ov-in"><div class="small">Score check ho raha hai…</div></div>');
     let out;
     try { out = await api.rpc('game_finish', { p_run_id: run.run_id, p_events: res.events }); }
-    catch (x) { showResult({ ok: false, msg: 'Run count nahi hua. Dobara try karo.' }); return; }
-    if (!out || !out.ok) { showResult({ ok: false, msg: REASON[out && out.reason] || 'Run count nahi hua. Dobara try karo.' }); return; }
+    catch (x) { const m2 = String((x && (x.code_text || x.message)) || x || ''); const code = m2.replace(/[^\w .:-]/g, '').slice(0, 60); const fr = /rate_limited/.test(m2) ? 'Thoda ruko, phir try karo.' : /run_already_finished/.test(m2) ? 'Ye run pehle hi ginn liya gaya.' : /not_found/.test(m2) ? 'Ye run nahi mila. Naya game shuru karo.' : /failed to fetch|network|load failed/i.test(m2) ? 'Internet slow/ band tha. Net check karke dobara khelo.' : 'Run count nahi hua. Dobara try karo.'; showResult({ ok: false, msg: fr + (code ? ' (' + code + ')' : '') }); return; }
+    if (!out || !out.ok) { showResult({ ok: false, msg: REASON[out && out.reason] || ('Run count nahi hua. Dobara try karo.' + (out && out.reason ? ' (' + String(out.reason).replace(/[^\w]/g, '').slice(0, 30) + ')' : '')) }); return; }
     lastRun = { run_id: run.run_id, score: out.score };
     if (out.score > bestLocal) { bestLocal = out.score; try { localStorage.setItem(BEST_KEY, String(bestLocal)); } catch { /* */ } }
     showResult({ ok: true, out, prize: out.prize || {} });
