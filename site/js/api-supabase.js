@@ -19,7 +19,15 @@ export function createSupabaseApi(cfg) {
   };
   const api = {
     mode: 'live', client: sb,
-    async select(table, o = {}) { let q = sb.from(table).select(o.select || '*', o.count ? { count: 'exact' } : undefined); q = applyQ(q, o);
+    async select(table, o = {}) {
+      // speed: identical public reads made at the same moment (or within 20 s) share one network request
+      if (!o.single && !o.count && !o.noCache && ['categories', 'products', 'site_settings', 'brands', 'ads', 'apps', 'videos'].includes(table) && !location.pathname.includes('/admin/')) {
+        const k = table + JSON.stringify(o); window.__szQ = window.__szQ || {}; const hit = window.__szQ[k];
+        if (hit && Date.now() - hit.t < 20000) return hit.p.then((r) => r.slice ? r.slice() : r);
+        const p = api._select(table, o); window.__szQ[k] = { t: Date.now(), p }; p.catch(() => { delete window.__szQ[k]; }); return p.then((r) => r.slice ? r.slice() : r);
+      }
+      return api._select(table, o); },
+    async _select(table, o = {}) { let q = sb.from(table).select(o.select || '*', o.count ? { count: 'exact' } : undefined); q = applyQ(q, o);
       if (o.single) { const { data, error } = await q.maybeSingle(); fail(error); return data; }
       const { data, error, count } = await q; fail(error); if (o.count) data.total = count; return data; },
     async insert(table, row) { const { data, error } = await sb.from(table).insert(row).select().single(); fail(error); return data; },
