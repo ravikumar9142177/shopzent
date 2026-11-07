@@ -15,6 +15,24 @@ const PAGES = {
   game: G.gamePage,
   games: GH.gamesHub, play: GH.arcadePage,
 };
+
+// Visitor location (state / district) — ONLY if the visitor taps "Haan". Exact position is never saved: only the state and district name.
+function geoAsk(vid) {
+  try {
+    const KEY = 'sz_geo'; const st = localStorage.getItem(KEY);
+    const run = async () => { try { const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: false, timeout: 15000, maximumAge: 86400000 }));
+      const u = 'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + pos.coords.latitude.toFixed(2) + '&longitude=' + pos.coords.longitude.toFixed(2) + '&localityLanguage=en';
+      const j = await (await fetch(u)).json(); const adm = (j.localityInfo && j.localityInfo.administrative) || []; const dist = (adm.find((a) => a.adminLevel === 5 && /district/i.test(a.name)) || adm.find((a) => a.adminLevel === 5) || {}).name || j.city || '';
+      if (j.principalSubdivision) await api.rpc('track_visit_geo', { p_vid: vid, p_state: j.principalSubdivision, p_district: dist }); localStorage.setItem('sz_geo_day', new Date().toISOString().slice(0, 10)); } catch {} };
+    if (st === 'no' || !navigator.geolocation) return;
+    if (st === 'yes') { if (localStorage.getItem('sz_geo_day') !== new Date().toISOString().slice(0, 10)) run(); return; }
+    if (sessionStorage.getItem('sz_geo_seen')) return; sessionStorage.setItem('sz_geo_seen', '1');
+    setTimeout(() => { const b = document.createElement('div'); b.setAttribute('role', 'dialog'); b.style.cssText = 'position:fixed;left:10px;right:10px;bottom:76px;z-index:90;background:#1B1230;color:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:.86rem;max-width:460px;margin:0 auto';
+      b.innerHTML = '<div style="margin-bottom:8px">📍 Aap kis rajya/jile se ho, batayenge? Sirf gintee ke liye (kitne log kahan se aate hain). Exact location save nahi hoti, sirf rajya aur jila.</div><div style="display:flex;gap:8px"><button type="button" id="szg-y" style="flex:1;border:0;border-radius:12px;padding:10px;font-weight:700;background:#7C3AED;color:#fff">Haan, theek hai</button><button type="button" id="szg-n" style="flex:1;border:0;border-radius:12px;padding:10px;font-weight:700;background:#33284d;color:#fff">Nahi</button></div>';
+      document.body.appendChild(b);
+      b.querySelector('#szg-y').onclick = () => { localStorage.setItem(KEY, 'yes'); b.remove(); run(); }; b.querySelector('#szg-n').onclick = () => { localStorage.setItem(KEY, 'no'); b.remove(); }; }, 4000);
+  } catch {}
+}
 // Maintenance mode: when the admin has UNPUBLISHED the site, visitors see a friendly closed page (admins still see the site, with a banner).
 function closedPage(st) {
   const wa = (window.SHOPZENT_CONFIG && window.SHOPZENT_CONFIG.WHATSAPP_FALLBACK) || '9942598154';
@@ -42,7 +60,7 @@ function closedPage(st) {
     if (me && ['admin', 'super_admin'].includes(me.role)) document.body.insertAdjacentHTML('afterbegin', '<div style="background:#dc2626;color:#fff;text-align:center;padding:8px;font-weight:600;position:sticky;top:0;z-index:99">🔴 Website is UNPUBLISHED — customers see the closed page. Only you can see this. <a href="admin/dashboard.html" style="color:#fff;text-decoration:underline">Publish again</a></div>');
     else { closedPage(st); return; }
   }
-  try { if (!DEMO) { let vid = localStorage.getItem('sz_vid'); if (!vid) { vid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)); localStorage.setItem('sz_vid', vid); } api.rpc('track_visit', { p_vid: vid, p_src: /SHOPZENTApp/.test(navigator.userAgent) ? 'app' : 'web' }).catch(() => {}); } } catch {}
+  try { if (!DEMO) { let vid = localStorage.getItem('sz_vid'); if (!vid) { vid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)); localStorage.setItem('sz_vid', vid); } api.rpc('track_visit', { p_vid: vid, p_src: /SHOPZENTApp/.test(navigator.userAgent) ? 'app' : 'web' }).catch(() => {}); geoAsk(vid); } } catch {}
   try { if (page && page.startsWith('legal-')) await C.legalPage(page.slice(6)); else if (PAGES[page]) await PAGES[page](); }
   catch (e) { if (e && e.message === 'redirect') return; console.error(e); const m = document.getElementById('main'); if (m && !m.dataset.static) m.insertAdjacentHTML('afterbegin', '<div class="container"><div class="alert bad" style="margin-top:16px">Something went wrong loading this page. Please refresh. If it keeps happening, contact us on WhatsApp.</div></div>'); }
 })();
