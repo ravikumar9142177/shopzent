@@ -84,7 +84,7 @@ export async function reset() {
 // ---------- account shell ----------
 const ACC = [['dashboard.html', 'Dashboard'], ['orders.html', 'My Orders'], ['wallet.html', 'Wallet & Coins'], ['wishlist.html', 'Wishlist'], ['returns.html', 'Return / Refund'], ['profile.html', 'Profile & Security']];
 function shell(title, inner) { const here = location.pathname.split('/').pop(); return `<div class="phead"><div class="container"><div class="crumbs"><a href="index.html">Home</a> / <a href="dashboard.html">My account</a> / ${esc(title)}</div><h1>${esc(title)}</h1></div></div>
-  <div class="container acc"><nav class="acc-nav" aria-label="Account">${ACC.map(([h, l]) => `<a href="${h}" class="${h === here ? 'active' : ''}">${l}</a>`).join('')}<a href="#" data-logout>Log out</a></nav><div id="acc-body">${inner}</div></div>`; }
+  <div class="container acc"><nav class="acc-nav" aria-label="Account">${ACC.map(([h, l]) => `<a href="${h}" class="${h === here ? 'active' : ''}">${l}</a>`).join('')}<a href="#" data-logout>Log out</a><a href="#" data-logout-all>Log out all devices</a></nav><div id="acc-body">${inner}</div></div>`; }
 export async function dashboard() {
   const p = await requireLogin(); main().innerHTML = shell('Dashboard', `<div class="idcard"><div class="small" style="opacity:.85">Hello,</div><h2 style="color:#fff;margin:0 0 10px">${esc(p.full_name || 'Shopper')}</h2>
     <div class="row" style="gap:18px"><div><div class="tiny" style="opacity:.8">Customer ID</div><code>${esc(p.customer_id || '—')}</code></div><div><div class="tiny" style="opacity:.8">Wallet ID</div><code>${esc(p.wallet_id || '—')}</code></div></div></div>
@@ -103,7 +103,8 @@ export async function dashboard() {
   const rv = await api.select('recently_viewed', { order: { col: 'viewed_at', asc: false }, limit: 10 }).catch(() => []); const ids = rv.map((r) => r.product_id);
   const prods = ids.length ? (await api.select('products', { in: { id: ids }, eq: { published: true } })).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)) : []; await renderProducts($('#rv'), prods, 'Products you view will show up here.');
 }
-function bindLogout() { $$('[data-logout]').forEach((a) => a.addEventListener('click', async (e) => { e.preventDefault(); await api.auth.signOut(); resetProfile(); location.href = 'index.html'; })); }
+function bindLogout() { $$('[data-logout]').forEach((a) => a.addEventListener('click', async (e) => { e.preventDefault(); await api.auth.signOut(); resetProfile(); location.href = 'index.html'; }));
+  $$('[data-logout-all]').forEach((a) => a.addEventListener('click', async (e) => { e.preventDefault(); if (!confirm('Sabhi devices se log out? Aapke saare phones/browsers se login band ho jayega.')) return; try { await api.rpc('log_auth_event', { p_action: 'logout_all', p_details: {} }); } catch {} await api.auth.signOut(true); resetProfile(); location.href = 'index.html'; })); }
 
 export async function profilePage() {
   const p = await requireLogin(); const factors = await api.auth.factors().catch(() => []); const mfaOn = factors.some((f) => f.status === 'verified');

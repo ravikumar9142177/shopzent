@@ -48,7 +48,7 @@ function shell() {
   document.body.classList.add('admin');
   document.body.innerHTML = `${DEMO ? '<div class="demo-bar">👀 <b>Preview mode</b> — admin panel running on demo data in this browser only.</div>' : ''}<div class="adm"><aside class="adm-side" id="side"><a href="dashboard.html" style="padding:6px 8px 12px"><img src="../assets/logo-lockup.png" alt="SHOPZENT" style="height:36px"></a>
     ${NAV.flatMap((n) => n[1]).map(([k, i, l]) => `<a href="${k}.html" class="${k === MOD ? 'active' : ''}"><span aria-hidden="true">${i}</span>${l}</a>`).join('')}
-    <h5>Account</h5><a href="../index.html" target="_blank">🌐 View website</a><a href="../profile.html#security">🔐 My 2FA & recovery codes</a><a href="#" id="lo">🚪 Log out</a></aside><div class="shade-adm" id="shade"></div>
+    <h5>Account</h5><a href="../index.html" target="_blank">🌐 View website</a><a href="../profile.html#security">🔐 My 2FA & recovery codes</a><a href="#" id="lo">🚪 Log out (sirf is device se)</a><a href="#" id="lo-all">🚪 Sabhi devices se log out</a></aside><div class="shade-adm" id="shade"></div>
     <div><div class="adm-top"><button class="icon-btn" id="sb" style="display:grid" aria-label="Menu">${IC.menu}</button><b class="grow">${esc(NAV.flatMap((n) => n[1]).find((x) => x[0] === MOD)?.[2] || 'Admin')}</b><a class="tag" id="site-pill" href="dashboard.html" style="display:none"></a><a class="icon-btn" href="dashboard.html#notifications" aria-label="Notifications">${IC.bell}<span class="badge" id="nb"></span></a><span class="tag ${ME.role === 'super_admin' ? 'pink' : ''}">${esc(ME.role.replace('_', ' '))}</span></div>
     <main class="adm-main" id="adm-main"><div class="sk" style="height:200px"></div></main></div></div>`;
   const side = $('#side'), shade = $('#shade');
@@ -56,6 +56,7 @@ function shell() {
   $('#sb').onclick = () => { side.classList.add('open'); shade.classList.add('open'); }; shade.onclick = () => { side.classList.remove('open'); shade.classList.remove('open'); };
   if (matchMedia('(min-width:1000px)').matches) $('#sb').style.display = 'none';
   $('#lo').onclick = async (e) => { e.preventDefault(); await api.auth.signOut(); location.href = 'index.html'; };
+  $('#lo-all').onclick = async (e) => { e.preventDefault(); if (!await confirmBox('Sabhi devices se log out?', 'Aapke saare phones/computers se admin login ek saath band ho jayega.', { ok: 'Sab se log out', danger: true })) return; try { await api.rpc('log_auth_event', { p_action: 'logout_all', p_details: {} }); } catch {} await api.auth.signOut(true); location.href = 'index.html'; };
   api.rpc('admin_site_status').then((s) => { const p = $('#site-pill'); if (!p) return; p.style.display = ''; p.className = 'tag ' + (s.published ? 'green' : 'red'); p.textContent = s.published ? '● LIVE' : '● CLOSED'; }).catch(() => {});
   api.rpc('admin_security_alert_counts').then((c) => { const a = document.querySelector('.adm-side a[href="alerts.html"]'); if (a && c.new_total) a.insertAdjacentHTML('beforeend', `<span class="tag ${c.new_high ? 'red' : 'pink'}" style="margin-left:auto">${c.new_total}</span>`); }).catch(() => {});
   api.rpc('admin_game_pending_count').then((n) => { const a = document.querySelector('.adm-side a[href="game-winners.html"]'); if (a && n) a.insertAdjacentHTML('beforeend', `<span class="tag pink" style="margin-left:auto">${n}</span>`); }).catch(() => {});
@@ -165,7 +166,11 @@ async function crud({ table, title, fields, cols, render, order = { col: 'create
   const R = main(); let ROWS = [];
   const draw = async () => { const q = R.querySelector('.cq')?.value || ''; const rows = await api.select(table, { order, limit: 1000, ...(q && search ? { search: { text: q, cols: search } } : {}) });
     const rowHtml = (r) => `<tr>${render(r)}<td><div class="row"><button class="btn xs sec" data-ed="${esc(r.id)}">Edit</button><button class="btn xs ghost" data-del="${esc(r.id)}" aria-label="Delete">🗑️</button></div></td></tr>`;
-    if (groupBy) { const gs = groupBy(rows); R.querySelector('.ct').innerHTML = gs.length ? gs.map((g) => `<details class="szgrp" open style="margin:0 0 14px;border:1px solid var(--line);border-radius:14px;overflow:hidden"><summary style="cursor:pointer;padding:12px 14px;font-weight:800;background:#F5F3FF;display:flex;justify-content:space-between;gap:8px"><span>${esc(g.label)}</span><span class="tag gray">${g.rows.length}</span></summary><div style="padding:6px 8px">${tbl([...cols, ''], g.rows.map(rowHtml), 'Nothing here yet.')}</div></details>`).join('') : '<p class="muted">Nothing here yet — tap “Add new”.</p>'; }
+    if (groupBy) { const gs = groupBy(rows); const qv = R.querySelector('.cq')?.value || ''; const selG = (!qv && window.__szSel != null) ? gs.find((g) => g.label === window.__szSel) : null;
+      if (qv) { R.querySelector('.ct').innerHTML = `<p class="small muted" style="margin:0 0 8px">Search result: ${rows.length} product</p>` + tbl([...cols, ''], rows.map(rowHtml), 'Kuch nahi mila.'); }
+      else if (selG) { R.querySelector('.ct').innerHTML = `<div class="row" style="gap:10px;align-items:center;margin-bottom:12px"><button class="btn sm sec" id="sz-back">← Saare sections</button><b style="font-size:1.1rem">${esc(selG.label)}</b><span class="tag gray">${selG.rows.length} products</span></div>` + tbl([...cols, ''], selG.rows.map(rowHtml), 'Is section me abhi koi product nahi.'); R.querySelector('#sz-back').onclick = () => { window.__szSel = null; draw(); }; }
+      else { R.querySelector('.ct').innerHTML = `<p class="small muted" style="margin:0 0 10px">Section par tap karo, uske saare products khulenge. Total ${rows.length} products.</p><div class="szsec-grid">${gs.map((g, ix) => { const live = g.rows.filter((r) => r.published).length; const im0 = (g.rows.find((r) => (r.images || [])[0]) || {}).images; return `<button type="button" class="szsec" data-ix="${ix}"><span class="szsec-ic">${im0 && im0[0] ? `<img src="${esc(media(im0[0]))}" alt="" loading="lazy">` : ''}</span><b>${esc(g.label)}</b><span class="szsec-n">${g.rows.length} products</span><span class="tiny muted">${live} live${g.rows.length - live ? ' · ' + (g.rows.length - live) + ' hidden' : ''}</span></button>`; }).join('')}</div>`;
+        R.querySelectorAll('.szsec').forEach((b) => b.onclick = () => { window.__szSel = gs[Number(b.dataset.ix)].label; draw(); window.scrollTo({ top: 0 }); }); } }
     else R.querySelector('.ct').innerHTML = tbl([...cols, ''], rows.map(rowHtml), 'Nothing here yet — tap “Add new”.');
     R.querySelector('.ct').onclick = async (e) => { const ed = e.target.closest('[data-ed]'), de = e.target.closest('[data-del]'); const tg = e.target.closest('[data-toggle]');
       if (ed) { const r = rows.find((x) => x.id === ed.dataset.ed); formModal('Edit ' + title.toLowerCase(), fields, r, async (d) => { await api.update(table, r.id, before(d, r)); after && await after(r.id, d); ok('Saved ✓'); draw(); }, folder); }
@@ -388,6 +393,7 @@ M.messages = async () => {
 
 // ----- products -----
 M.products = async () => {
+  window.__szSel = null;
   const [cats, brs, cps] = await Promise.all([api.select('categories', { order: { col: 'sort', asc: true } }), api.select('brands', { order: { col: 'sort', asc: true } }), api.select('coupons', { order: { col: 'code', asc: true } })]);
   const isAff = (r) => r.purchase_type === 'affiliate';
   const fields = [

@@ -142,7 +142,7 @@ export async function chrome() {
         + `<a class="dg-top" href="${href('downloads/shopzent-v1.2.2.apk')}" download="shopzent.apk" style="color:var(--purple);font-weight:800">📲 Download SHOPZENT App (APK)</a>`
         + G('🛍️', 'Shop', L([['products.html', 'All Products'], ['categories.html', 'Categories'], ['trending.html', 'Trending'], ['deals.html', 'Best Deals'], ['featured.html', 'Featured'], ['brands.html', 'Brands'], ['offers.html', 'Coupons & Offers'], ['games.html', '🎮 Play Game']]))
         + G('📲', 'Apps & Videos', L([['apps.html', 'Digital Apps'], ['apk.html', 'APK Downloads'], ['videos.html', 'Video Tutorials'], ['promo-videos.html', 'Promo Videos']]))
-        + G('👤', 'My Account', L([['dashboard.html', 'Dashboard'], ['orders.html', 'My Orders'], ['wallet.html', 'Wallet & Coins'], ['wishlist.html', 'Wishlist'], ['returns.html', 'Returns / Refunds'], ['profile.html', 'Profile & Security']]) + adm + (p ? '<a href="#" data-logout>Log out</a>' : ''))
+        + G('👤', 'My Account', L([['dashboard.html', 'Dashboard'], ['orders.html', 'My Orders'], ['wallet.html', 'Wallet & Coins'], ['wishlist.html', 'Wishlist'], ['returns.html', 'Returns / Refunds'], ['profile.html', 'Profile & Security']]) + adm + (p ? '<a href="#" data-logout>Log out (sirf is device se)</a><a href="#" data-logout-all>Sabhi devices se log out</a>' : ''))
         + G('ℹ️', 'Help', L([['about.html', 'About Us'], ['contact.html', 'Contact Us'], ['ads.html', 'Advertisements'], ['privacy.html', 'Privacy Policy'], ['terms.html', 'Terms'], ['affiliate-disclosure.html', 'Affiliate Disclosure']])); })()}
     </div></div>`;
   document.body.prepend(top);
@@ -172,8 +172,9 @@ export async function chrome() {
   if (page !== 'payment' && page !== 'payment-submit') { const wa = document.createElement('a'); wa.className = 'wa-float'; wa.href = waLink(c.whatsapp, 'Hi SHOPZENT, I need help'); wa.target = '_blank'; wa.rel = 'noopener'; wa.setAttribute('aria-label', 'Chat on WhatsApp'); wa.innerHTML = IC.wa; document.body.appendChild(wa); }
   document.querySelectorAll('#drawer .dg-h').forEach((b) => b.addEventListener('click', () => { const g = b.parentElement, was = g.classList.contains('open'); document.querySelectorAll('#drawer .dg.open').forEach((x) => { x.classList.remove('open'); x.firstElementChild.setAttribute('aria-expanded', 'false'); }); if (!was) { g.classList.add('open'); b.setAttribute('aria-expanded', 'true'); } }));
   const dr = $('#drawer'); $('#menu-btn')?.addEventListener('click', () => { dr.classList.add('open'); dr.setAttribute('aria-hidden', 'false'); });
-  dr.addEventListener('click', (e) => { if (e.target.closest('[data-close-drawer]') || e.target.closest('a[href]:not([data-logout])')) { dr.classList.remove('open'); dr.setAttribute('aria-hidden', 'true'); } });
+  dr.addEventListener('click', (e) => { if (e.target.closest('[data-close-drawer]') || e.target.closest('a[href]:not([data-logout]):not([data-logout-all])')) { dr.classList.remove('open'); dr.setAttribute('aria-hidden', 'true'); } });
   $$('[data-logout]').forEach((a) => a.addEventListener('click', async (e) => { e.preventDefault(); await api.auth.signOut(); resetProfile(); location.href = href('index.html'); }));
+  $$('[data-logout-all]').forEach((a) => a.addEventListener('click', async (e) => { e.preventDefault(); if (!confirm('Sabhi devices se log out? Aapke saare phones/browsers se login band ho jayega.')) return; try { await api.rpc('log_auth_event', { p_action: 'logout_all', p_details: {} }); } catch {} await api.auth.signOut(true); resetProfile(); location.href = href('index.html'); }));
   updateBadges(); reveal(); initTilt();
   festivalHook(s, page);
   import('./visualsearch.js').then((m) => m.initCameraSearch()).catch(() => {});
