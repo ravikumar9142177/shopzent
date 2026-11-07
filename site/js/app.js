@@ -22,7 +22,7 @@ function closedPage(st) {
   document.title = 'SHOPZENT — thodi der me wapas | Back soon';
   document.body.className = ''; document.body.removeAttribute('data-page');
   document.body.innerHTML = `<main id="main" style="min-height:100vh;display:grid;place-items:center;padding:20px;background:#0E0818"><div style="max-width:440px;width:100%;background:#1B1230;color:#fff;border-radius:24px;box-shadow:0 20px 50px rgba(124,58,237,.35);padding:28px 22px;text-align:center">
-    <img src="${root}/assets/logo-lockup.png" alt="SHOPZENT" style="height:44px;margin-bottom:14px">
+    <img src="${root}/assets/logo-lockup.png?v=2" alt="SHOPZENT" style="height:44px;margin-bottom:14px">
     <div style="font-size:3rem;line-height:1" aria-hidden="true">🛠️</div>
     <h1 style="font-size:1.35rem;margin:12px 0 6px">Website abhi thodi der ke liye band hai</h1>
     <p style="font-size:1.05rem;margin:0 0 14px"><b>Jaldi wapas aayenge 🙏</b></p>
