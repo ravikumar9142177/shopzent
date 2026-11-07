@@ -56,13 +56,14 @@ export async function home() {
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(() => { if (hold || document.hidden) return; i = (i + 1) % dots.length; go(i); }, 4000); } }
   $('#h-cats').innerHTML = cats.map((c) => `<a class="cat" href="products.html?category=${encodeURIComponent(c.slug)}"><span class="ic" aria-hidden="true">${/^https?:|\//.test(c.icon || '') ? `<img loading="lazy" decoding="async" src="${esc(media(c.icon))}" alt="">` : esc(c.icon || '🛍️')}</span>${esc(c.name)}</a>`).join('') || '<p class="muted">Categories will appear here.</p>';
   $('#h-coll').innerHTML = cats.slice(0, 3).map((c) => `<a class="banner-card" href="products.html?category=${encodeURIComponent(c.slug)}"><img loading="lazy" src="${esc(media(c.banner_url) || 'assets/banners/promo.svg')}" alt="${esc(c.name)} collection"></a>`).join('');
-  const all = await api.select('products', { ...PUB, order: { col: 'created_at', asc: false }, limit: 60 });
-  const pick = (f, n = 8) => all.filter(f).slice(0, n);
+  const all = await api.select('products', { ...PUB, order: { col: 'created_at', asc: false }, limit: 200 });
+  const shuf = (a) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+  const pick = (f, n = 8) => shuf(all.filter(f)).slice(0, n);
   await renderProducts($('#h-trending'), pick((p) => p.is_trending), 'Trending products will appear here.');
   await renderProducts($('#h-deals'), pick((p) => p.is_deal, 4), 'Deals will appear here.');
   await renderProducts($('#h-featured'), pick((p) => p.is_featured), 'Featured products will appear here.');
-  await renderProducts($('#h-popular'), all.filter((p) => p.is_popular).concat(all.filter((p) => !p.is_popular).sort((a, b) => b.view_count - a.view_count)).slice(0, 8));
-  await renderProducts($('#h-latest'), all.slice(0, 8));
+  await renderProducts($('#h-popular'), shuf(all.filter((p) => p.is_popular).concat(all.filter((p) => !p.is_popular).sort((a, b) => b.view_count - a.view_count).slice(0, 12))).slice(0, 8));
+  await renderProducts($('#h-latest'), all.slice(0, 3).concat(shuf(all.slice(3)).slice(0, 5)));
   $('#h-coupons').innerHTML = couponHint();
   featuredCoupon().then((html) => { if (!html) return; $('#h-coupons').innerHTML = html; const cb = $('#h-coupons [data-copy]'); if (cb) cb.onclick = () => navigator.clipboard?.writeText(cb.dataset.copy).then(() => toast('Copied ✓', 'ok')); });
   const br = await brands(); $('#h-brands').innerHTML = br.slice(0, 12).map((b) => `<a class="brand-tile" href="products.html?brand=${encodeURIComponent(b.slug)}">${b.logo_url ? `<img loading="lazy" decoding="async" src="${esc(media(b.logo_url))}" alt="${esc(b.name)}" style="max-height:44px">` : esc(b.name)}</a>`).join('');
@@ -149,7 +150,7 @@ export async function product() {
   const sizesOn = p._sizes === true; const sizeOpts = sizesOn && Array.isArray(p.size_options) ? p.size_options : [];
   const sizeBlock = sizesOn ? `<div class="size-pick" style="margin:12px 0"><b>Size chuniye / Choose size</b>${sizeOpts.length ? `<div class="size-chips" role="group" aria-label="Size">${sizeOpts.map((o) => { const out = o.stock !== null && o.stock !== undefined && Number(o.stock) <= 0; return `<button type="button" class="size-chip" data-size="${esc(o.label)}"${out ? ' disabled aria-disabled="true" title="Out of stock"' : ''}>${esc(o.label)}${out ? ' <small>(khatam)</small>' : ''}</button>`; }).join('')}</div><p class="tiny muted" id="size-msg">Pehle size chuniye, phir cart me add hoga.</p>` : '<p class="small muted">Is product ke size abhi set nahi hain.</p>'}</div>` : '';
   main().innerHTML = `<div class="container"><div class="crumbs" style="margin-top:14px"><a href="index.html">Home</a> / ${p._cat ? `<a href="products.html?category=${esc(p._cat.slug)}">${esc(p._cat.name)}</a> / ` : ''}${esc(p.name)}</div>
-  <div class="pd"><div class="gallery"><div class="main"><img id="g-main" src="${esc(imgs[0])}" alt="${esc(p.name)}"></div>${imgs.length > 1 ? `<div class="thumbs">${imgs.map((u, i) => `<button class="${i ? '' : 'on'}" data-img="${esc(u)}" aria-label="Image ${i + 1}"><img src="${esc(u)}" alt=""></button>`).join('')}</div>` : ''}
+  <div class="pd"><div class="gallery"><div class="main" id="g-wrap"><img id="g-main" src="${esc(imgs[0])}" alt="${esc(p.name)}" decoding="async" fetchpriority="high">${imgs.length > 1 ? `<button type="button" class="g-nav prev" id="g-prev" aria-label="Previous photo">‹</button><button type="button" class="g-nav next" id="g-next" aria-label="Next photo">›</button><span class="g-count" id="g-count">1 / ${imgs.length}</span>` : ""}<span class="g-zoom" aria-hidden="true">🔍 Tap to zoom</span></div>${imgs.length > 1 ? `<div class="thumbs">${imgs.map((u, i) => `<button class="${i ? '' : 'on'}" data-img="${esc(u)}" aria-label="Image ${i + 1}"><img src="${esc(u)}" alt=""></button>`).join('')}</div>` : ''}
     ${safeUrl(p.video_url, false) ? `<div style="margin-top:12px">${embedFor(p.video_url)}</div>` : ''}</div>
   <div><div class="row" style="gap:6px;margin-bottom:8px"><span class="mkt ${esc(p.marketplace)}">${esc(mktName(p.marketplace))}</span>${p.is_trending ? '<span class="tag pink">Trending</span>' : ''}${p.is_deal ? '<span class="tag orange">Deal</span>' : ''}${p.is_sample ? '<span class="tag dark">SAMPLE LISTING</span>' : ''}</div>
     ${p._brand ? `<div class="brand small muted" style="text-transform:uppercase;letter-spacing:.06em;font-weight:600">${esc(p._brand)}</div>` : ''}<h1 style="font-size:clamp(1.3rem,4vw,2rem)">${esc(p.name)}</h1>
@@ -167,7 +168,11 @@ export async function product() {
     <div id="reviews"></div>
     <p class="tiny muted" style="margin-top:10px">Product ID: ${esc(p.product_code || p.id)}</p></div></div>
   <section class="sec" style="padding-top:0"><div class="sec-h"><h2>You may also like</h2></div><div class="scroller" id="related">${skeletonCards(4)}</div></section></div>`;
-  $$('[data-img]').forEach((b) => b.onclick = () => { $('#g-main').src = b.dataset.img; $$('[data-img]').forEach((x) => x.classList.toggle('on', x === b)); });
+  { const list = imgs.slice(); let gi = 0; const setG = (n) => { gi = (n + list.length) % list.length; $('#g-main').src = list[gi]; $$('[data-img]').forEach((x, k) => x.classList.toggle('on', k === gi)); const gc = $('#g-count'); if (gc) gc.textContent = (gi + 1) + ' / ' + list.length; $$('[data-img]')[gi]?.scrollIntoView({ block: 'nearest', inline: 'center' }); };
+    $$('[data-img]').forEach((b, k) => b.onclick = () => setG(k));
+    $('#g-prev')?.addEventListener('click', (e) => { e.stopPropagation(); setG(gi - 1); }); $('#g-next')?.addEventListener('click', (e) => { e.stopPropagation(); setG(gi + 1); });
+    const w = $('#g-wrap'); let sx = null; w?.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true }); w?.addEventListener('touchend', (e) => { if (sx === null || list.length < 2) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 40) { setG(gi + (dx < 0 ? 1 : -1)); w._sw = Date.now(); } }, { passive: true });
+    w?.addEventListener('click', (e) => { if (e.target.closest('.g-nav') || Date.now() - (w._sw || 0) < 400) return; const ov = document.createElement('div'); ov.className = 'g-lightbox'; ov.innerHTML = '<button type="button" class="g-x" aria-label="Close">✕</button><img alt="">'; ov.querySelector('img').src = list[gi]; ov.addEventListener('click', () => ov.remove()); document.body.appendChild(ov); }); }
   const qv = () => Math.max(1, Math.min(20, parseInt($('#qty')?.value) || 1));
   $('#qminus')?.addEventListener('click', () => { $('#qty').value = Math.max(1, qv() - 1); }); $('#qplus')?.addEventListener('click', () => { $('#qty').value = Math.min(20, qv() + 1); });
   let chosenSize = '';
