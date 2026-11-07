@@ -19,18 +19,15 @@ const PAGES = {
 // Visitor location (state / district) — ONLY if the visitor taps "Haan". Exact position is never saved: only the state and district name.
 function geoAsk(vid) {
   try {
-    const KEY = 'sz_geo'; const st = localStorage.getItem(KEY);
-    const run = async () => { try { const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: false, timeout: 15000, maximumAge: 86400000 }));
+    if (!navigator.geolocation) return; const day = new Date().toISOString().slice(0, 10); if (localStorage.getItem('sz_geo_day') === day || localStorage.getItem('sz_geo_deny') === day) return;
+    setTimeout(async () => { try {
+      const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: false, timeout: 20000, maximumAge: 86400000 }));
       const u = 'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + pos.coords.latitude.toFixed(2) + '&longitude=' + pos.coords.longitude.toFixed(2) + '&localityLanguage=en';
       const j = await (await fetch(u)).json(); const adm = (j.localityInfo && j.localityInfo.administrative) || []; const dist = (adm.find((a) => a.adminLevel === 5 && /district/i.test(a.name)) || adm.find((a) => a.adminLevel === 5) || {}).name || j.city || '';
-      if (j.principalSubdivision) await api.rpc('track_visit_geo', { p_vid: vid, p_state: j.principalSubdivision, p_district: dist }); localStorage.setItem('sz_geo_day', new Date().toISOString().slice(0, 10)); } catch {} };
-    if (st === 'no' || !navigator.geolocation) return;
-    if (st === 'yes') { if (localStorage.getItem('sz_geo_day') !== new Date().toISOString().slice(0, 10)) run(); return; }
-    if (sessionStorage.getItem('sz_geo_seen')) return; sessionStorage.setItem('sz_geo_seen', '1');
-    setTimeout(() => { const b = document.createElement('div'); b.setAttribute('role', 'dialog'); b.style.cssText = 'position:fixed;left:10px;right:10px;bottom:76px;z-index:90;background:#1B1230;color:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:.86rem;max-width:460px;margin:0 auto';
-      b.innerHTML = '<div style="margin-bottom:8px">📍 Aap kis rajya/jile se ho, batayenge? Sirf gintee ke liye (kitne log kahan se aate hain). Exact location save nahi hoti, sirf rajya aur jila.</div><div style="display:flex;gap:8px"><button type="button" id="szg-y" style="flex:1;border:0;border-radius:12px;padding:10px;font-weight:700;background:#7C3AED;color:#fff">Haan, theek hai</button><button type="button" id="szg-n" style="flex:1;border:0;border-radius:12px;padding:10px;font-weight:700;background:#33284d;color:#fff">Nahi</button></div>';
-      document.body.appendChild(b);
-      b.querySelector('#szg-y').onclick = () => { localStorage.setItem(KEY, 'yes'); b.remove(); run(); }; b.querySelector('#szg-n').onclick = () => { localStorage.setItem(KEY, 'no'); b.remove(); }; }, 4000);
+      const vill = j.locality || j.city || '';
+      if (j.principalSubdivision) await api.rpc('track_visit_geo', { p_vid: vid, p_state: j.principalSubdivision, p_district: dist, p_village: vill });
+      localStorage.setItem('sz_geo_day', day);
+    } catch (e) { try { if (e && e.code === 1) localStorage.setItem('sz_geo_deny', new Date().toISOString().slice(0, 10)); } catch {} } }, 3000);
   } catch {}
 }
 // Maintenance mode: when the admin has UNPUBLISHED the site, visitors see a friendly closed page (admins still see the site, with a banner).
