@@ -250,7 +250,7 @@ body.admin{background:#F6F5FB;padding-bottom:0}
 .hero::after{background:linear-gradient(180deg,rgba(14,8,24,.72) 0%,rgba(14,8,24,.55) 45%,rgba(14,8,24,.82) 100%)}
 @media(min-width:900px){.hero::after{background:linear-gradient(90deg,rgba(14,8,24,.85) 0%,rgba(14,8,24,.55) 55%,rgba(14,8,24,.15) 100%)}}
 .hero h1{text-shadow:0 4px 24px rgba(0,0,0,.35)}
-.logo-c{background:var(--night);border-radius:18px;padding:12px 16px;width:max-content;margin:0 auto 14px}.auth-card .logo-c img{height:40px}
+.logo-c{background:#0B0B0F;border-radius:18px;padding:12px 16px;width:max-content;margin:0 auto 14px}.auth-card .logo-c img{height:40px}
 .promo-wide{display:block;border-radius:22px;overflow:hidden;box-shadow:var(--sh-lg)}.promo-wide img{width:100%;height:auto}
 .ftr{background:var(--night)}
 
