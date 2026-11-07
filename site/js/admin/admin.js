@@ -299,6 +299,9 @@ M.coupons = async () => {
     { k: 'eligible_product_ids', label: 'Only these products (none selected = all)', type: 'multi', opts: po, full: true }, { k: 'eligible_category_ids', label: 'Only these categories (none = all)', type: 'multi', opts: co }, { k: 'excluded_product_ids', label: 'Exclude these products', type: 'multi', opts: po },
     { k: 'active', label: 'Active', type: 'bool', def: true }];
   const parseKeys = (t) => String(t || '').split(/[,\n;]+/).map((x) => x.trim()).filter(Boolean);
+  setTimeout(async () => { try { const rr = await api.select('site_settings', { eq: { key: 'coupon_rotation' }, single: true }); const v = rr?.value || {}; const last = v.rotated_at ? new Date(v.rotated_at) : null; const nxt = last ? new Date(last.getTime() + 5 * 864e5) : null; const fm = (d) => d ? d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-';
+    const codes = Object.entries(v.codes || {}).sort((x, y) => Number(x[1]) - Number(y[1])).map(([c, p]) => `${Number(p)}% - <b>${esc(c)}</b>`).join(' · ');
+    const box = document.createElement('div'); box.className = 'alert small'; box.style.margin = '0 0 12px'; box.innerHTML = `🔄 <b>Auto code change:</b> har 5 din me sab % wale coupon ke code naye ban jate hain (discount wahi rehta hai). ${v.codes && Object.keys(v.codes).length ? 'Pichhli baar: ' + fm(last) + '. ' : 'Pehla change ' + fm(nxt) + ' ke baad (raat ~12:05 baje). '}${v.codes && Object.keys(v.codes).length ? 'Agla: ' + fm(nxt) + ' ke baad.' : ''}${codes ? '<div style="margin-top:6px;line-height:1.7">' + codes + '</div>' : ''}`; const q = main().querySelector('.cq'); (q || main().firstElementChild)?.insertAdjacentElement('beforebegin', box); } catch {} }, 600);
   await crud({ table: 'coupons', title: 'Coupons', fields, folder: 'coupons', search: ['code', 'description'],
     cols: ['Code', 'Discount', 'Rules', 'Visibility', 'Window', 'Status'],
     before: (d) => { const code = d.code.toUpperCase().replace(/\s+/g, ''); if (!/^[A-Z0-9_-]{3,32}$/.test(code)) throw new Error('Coupon code: 3–32 letters, digits, - or _ (no spaces).'); if (!(d.discount_value > 0)) throw new Error('Discount value must be more than 0.');
@@ -584,6 +587,7 @@ M.festival = async () => (await import('./festival-studio.js')).renderFestivalSt
 M['game-winners'] = async () => {
   main().innerHTML = head('Game winners (Tap Rush)') + `<div class="alert small">Tap Rush: har hafte pehle 3 alag accounts jo <b>target score</b> tak pahunchein, unhe 1st/2nd/3rd prize coins milte hain (coins points hain, cash nahi). Winner ki photo aur naam <b>aap approve karoge</b>; tabhi game ke neeche dikhenge. Har action audit me jaata hai.</div>
   <div class="card pad" style="margin-bottom:14px"><h3 style="margin-top:0">Game settings</h3><div id="gw-set" class="row" style="gap:10px;flex-wrap:wrap">Loading…</div></div>
+  <div class="card pad" style="margin-bottom:14px"><h3 style="margin-top:0">Podium me khud ka naam + photo (jab koi na jeete)</h3><p class="small muted" style="margin:0 0 8px">Jab 1st/2nd/3rd par koi winner nahi hota, yahan se aap apna naam aur photo laga sakte ho. Jab asli winner aayega (aur aap approve karoge) to wo uski jagah dikhega. Asli winner ki photo 7 din baad apne aap hat jati hai.</p><div id="gw-pod">Loading…</div></div>
   <div class="card pad"><div class="row between" style="flex-wrap:wrap;gap:8px"><h3 style="margin:0">Winners</h3><span class="small muted" id="gw-tot"></span></div><div id="gw-list" style="margin-top:10px">Loading…</div></div>`;
   let st = {}; try { const row = await api.select('site_settings', { eq: { key: 'game_weekly' }, single: true }); st = row?.value || {}; } catch {}
   const pr = Array.isArray(st.prizes) ? st.prizes : [30, 20, 10];
@@ -597,6 +601,12 @@ M['game-winners'] = async () => {
     try { await call('admin_set_game_settings', { p_enabled: $('#gw-en').checked, p_target: Number($('#gw-t').value), p_prizes: [Number($('#gw-p1').value), Number($('#gw-p2').value), Number($('#gw-p3').value)] }); ok('Game settings saved ✓'); }
     catch (x) { bad(x); }
   };
+  const podLoad = async () => { let cur = {}; try { cur = await call('admin_get_game_podium', {}); } catch {}
+    $('#gw-pod').innerHTML = [1, 2, 3].map((pl) => { const c = cur[String(pl)] || {}; return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;border-bottom:1px solid var(--line);padding-bottom:10px"><b style="width:46px">${pl === 1 ? '🥇 1st' : pl === 2 ? '🥈 2nd' : '🥉 3rd'}</b>${c.photo_path ? `<img src="${esc(media(c.photo_path))}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover">` : ''}<input class="pd-n" data-p="${pl}" maxlength="30" placeholder="Naam" value="${esc(c.name || '')}" style="width:150px"><input type="file" accept="image/*" class="pd-f" data-p="${pl}" style="max-width:190px"><button class="btn sm pd-s" data-p="${pl}">Save</button><button class="btn sm sec pd-c" data-p="${pl}">Hatao</button></div>`; }).join('');
+    $$('.pd-s').forEach((b) => b.onclick = async () => { const pl = Number(b.dataset.p), nm = $(`.pd-n[data-p="${pl}"]`).value.trim(), fl = $(`.pd-f[data-p="${pl}"]`).files[0]; if (nm.length < 2) return bad(new Error('Naam likho (2+ letters).'));
+      try { b.disabled = true; let path = (cur[String(pl)] || {}).photo_path || null; if (fl) path = await gwPublic(fl); await call('admin_set_game_podium', { p_place: pl, p_name: nm, p_public_path: path }); ok('Podium saved ✓'); podLoad(); } catch (x) { bad(x); } b.disabled = false; });
+    $$('.pd-c').forEach((b) => b.onclick = async () => { try { await call('admin_set_game_podium', { p_place: Number(b.dataset.p), p_name: '', p_public_path: null }); ok('Hata diya'); podLoad(); } catch (x) { bad(x); } }); };
+  podLoad();
   const load = async () => {
     let d; try { d = await call('admin_game_winners_list', { p_weeks: 8 }); } catch (x) { return bad(x); }
     $('#gw-tot').textContent = `Pending: ${d.pending || 0} · this week ${d.week_key || ''}`;

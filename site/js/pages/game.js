@@ -98,18 +98,18 @@ export async function gamePage() {
       if (!r) return `<div class="tr-pod p${place} empty"><div class="tr-av">${medal}</div><div class="tr-pn muted">Khali</div><div class="tiny muted">${rupeeCoins(s.prizes[place - 1])}</div></div>`;
       const photo = publicPhoto(r.photo_path);
       return `<div class="tr-pod p${place}"><div class="tr-av">${photo ? `<img src="${esc(photo)}" alt="${esc(r.name)}" loading="lazy" decoding="async" width="72" height="72">` : `<span>${initial(r.name)}</span>`}</div>
-        <div class="tr-pn">${esc(r.name)}</div><div class="tiny">${medal} #${place} · ${rupeeCoins(r.coins)}</div></div>`;
+        <div class="tr-pn">${esc(r.name)}</div><div class="tiny">${medal} #${place}${r.manual ? '' : ' · ' + rupeeCoins(r.coins)}</div></div>`;
     };
     $('#tr-podium').innerHTML = `<div class="tr-podium">${slot(2)}${slot(1)}${slot(3)}</div>
-      <p class="tiny muted center">${s.podium_week ? `Hafta: ${esc(String(s.podium_week))}` : 'Abhi tak koi winner nahi.'}${rows.length && !rows.some((r) => r.photo_path) ? ' · Photo admin approve karega.' : ''}</p>`;
+      <p class="tiny muted center">${s.podium_week && rows.length ? `Hafta: ${esc(String(s.podium_week))}` : 'Abhi tak koi winner nahi.'}${rows.some((r) => !r.manual && !r.photo_path) ? ' · Photo admin approve karega.' : ''} · Winner ki photo 7 din tak dikhti hai.</p>`;
   }
 
   function renderUpload(s) {
     const box = $('#tr-upload');
     const wins = (me && s.me && s.me.wins) || [];
-    const open = wins.filter((w) => w.submit_status === 'none' || w.submit_status === 'rejected');
-    const pending = wins.filter((w) => w.submit_status === 'pending');
-    const approved = wins.filter((w) => w.submit_status === 'approved');
+    const open = wins.filter((w) => !w.expired && (w.submit_status === 'none' || w.submit_status === 'rejected'));
+    const pending = wins.filter((w) => !w.expired && w.submit_status === 'pending');
+    const approved = wins.filter((w) => !w.expired && w.submit_status === 'approved');
     let html = '';
     for (const w of approved) html += `<div class="card pad tr-up-ok"><div class="small"><b>✅ Aapki photo aur naam game me live hain</b> (${esc(String(w.week_key))}, #${w.place})</div></div>`;
     for (const w of pending) html += `<div class="card pad"><div class="small"><b>⏳ Photo aur naam review me hain</b> (${esc(String(w.week_key))}, #${w.place}). Admin approve karega, tab game me dikhega.</div></div>`;
