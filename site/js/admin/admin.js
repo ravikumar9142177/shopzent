@@ -5,7 +5,7 @@ import { $, $$, esc, inr, num, param, toast, modal, confirmBox, errText, fmtDate
 import { href, media, IC } from '../layout.js';
 import { enrollMfa } from '../pages/account.js';
 const MOD = document.body.dataset.module;
-const NAV = [['Dashboard & orders', [['dashboard', '📊', 'Dashboard'], ['sales', '💰', 'Sales / Orders amount'], ['orders', '📦', 'Orders'], ['returns', '↩️', 'Returns & refunds']]],
+const NAV = [['Dashboard & orders', [['dashboard', '📊', 'Dashboard'], ['visitors', '👀', 'Visitors & users'], ['sales', '💰', 'Sales / Orders amount'], ['orders', '📦', 'Orders'], ['returns', '↩️', 'Returns & refunds']]],
   ['Shop', [['products', '🛍️', 'Products'], ['content', '🗂️', 'Categories & brands']]],
   ['Money & coins', [['payments', '💳', 'Payment verification'], ['coupons', '🎟️', 'Coupons'], ['wallet', '👛', 'Customer wallets'], ['coins', '🪙', 'Coins'], ['cointransfers', '🔁', 'Coin transfer requests'], ['referrals', '🔗', 'Share rewards'], ['game-winners', '🏆', 'Game winners']]],
   ['Content', [['festival', '🪔', 'Festival Studio'], ['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
@@ -583,6 +583,17 @@ const gwCompress = async (file) => {
   } finally { URL.revokeObjectURL(url); }
 };
 const gwPublic = async (file) => (await api.upload('public-media', new File([await gwCompress(file)], 'photo.jpg', { type: 'image/jpeg' }), 'settings/game-winners')).path;
+M.visitors = async () => {
+  main().innerHTML = head('Visitors & users') + '<div id="vs">Loading…</div>';
+  let s; try { s = await call('admin_visit_stats', {}); } catch (x) { return bad(x); }
+  const P = s.periods || {}, n = (v) => num(v || 0); const lab = { 1: 'Aaj', 7: 'Pichhle 7 din', 30: 'Pichhle 30 din', 90: 'Pichhle 90 din' };
+  const row = (d) => { const p = P[String(d)] || {}; return `<tr><td><b>${lab[d]}</b></td><td>${n(p.visitors)}</td><td>${n(p.visits)}</td><td>${n(p.web_visitors)} <span class="tiny muted">(${n(p.web_visits)} visits)</span></td><td>${n(p.app_visitors)} <span class="tiny muted">(${n(p.app_visits)} visits)</span></td></tr>`; };
+  const mx = Math.max(1, ...(s.daily || []).map((x) => Number(x.visits)));
+  main().querySelector('#vs').innerHTML = `<div class="kpis"><div class="kpi g"><b>${n(s.new_today)}</b><span>Aaj naye log joine hue</span></div><div class="kpi"><b>${n(s.new_7)}</b><span>Naye (7 din)</span></div><div class="kpi"><b>${n(s.new_30)}</b><span>Naye (30 din)</span></div><div class="kpi"><b>${n(s.old_users)}</b><span>Purane joine log (aaj se pehle)</span></div><div class="kpi"><b>${n(s.users_total)}</b><span>Total registered users</span></div><div class="kpi"><b>${n(s.logged_in_today)}</b><span>Aaj login kiye hue visitors</span></div></div>
+  <div class="card pad" style="margin-top:14px"><h3 style="margin-top:0">Visitors aur visits (website + APK)</h3><div style="overflow:auto"><table class="tbl" style="width:100%"><thead><tr><th>Period</th><th>Alag log (visitors)</th><th>Total visits</th><th>Website</th><th>APK app</th></tr></thead><tbody>${[1, 7, 30, 90].map(row).join('')}</tbody></table></div>
+  <p class="tiny muted" style="margin:8px 0 0">Visitor = ek phone/browser (din me ek hi baar ginta hai). Visit = page khulna (kitni baar aaye). Ye count ${s.tracking_since ? esc(String(s.tracking_since)) + ' se' : 'ab se'} shuru hua hai, isse pehle ka data nahi hai, isliye 30/90 din wale number dheere-dheere badhenge. Koi IP ya location save nahi hoti.</p></div>
+  <div class="card pad" style="margin-top:14px"><h3 style="margin-top:0">Pichhle 14 din (roz)</h3>${(s.daily || []).length ? (s.daily).map((x) => `<div class="row" style="gap:8px;flex-wrap:nowrap;margin:4px 0"><span class="tiny" style="width:64px">${esc(String(x.day).slice(5))}</span><div style="flex:1;background:#F1ECFE;border-radius:8px;height:18px"><div style="width:${Math.max(3, Math.round(Number(x.visits) / mx * 100))}%;background:var(--grad);height:18px;border-radius:8px"></div></div><span class="tiny" style="width:150px">${n(x.visitors)} log · ${n(x.visits)} visits · app ${n(x.app_visitors)}</span></div>`).join('') : '<p class="muted small">Abhi data aana shuru hua hai.</p>'}</div>`;
+};
 M.festival = async () => (await import('./festival-studio.js')).renderFestivalStudio({ main, head, call, ok, bad });
 M['game-winners'] = async () => {
   main().innerHTML = head('Game winners (Tap Rush)') + `<div class="alert small">Tap Rush: har hafte pehle 3 alag accounts jo <b>target score</b> tak pahunchein, unhe 1st/2nd/3rd prize coins milte hain (coins points hain, cash nahi). Winner ki photo aur naam <b>aap approve karoge</b>; tabhi game ke neeche dikhenge. Har action audit me jaata hai.</div>

@@ -42,6 +42,7 @@ function closedPage(st) {
     if (me && ['admin', 'super_admin'].includes(me.role)) document.body.insertAdjacentHTML('afterbegin', '<div style="background:#dc2626;color:#fff;text-align:center;padding:8px;font-weight:600;position:sticky;top:0;z-index:99">🔴 Website is UNPUBLISHED — customers see the closed page. Only you can see this. <a href="admin/dashboard.html" style="color:#fff;text-decoration:underline">Publish again</a></div>');
     else { closedPage(st); return; }
   }
+  try { if (!DEMO) { let vid = localStorage.getItem('sz_vid'); if (!vid) { vid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)); localStorage.setItem('sz_vid', vid); } api.rpc('track_visit', { p_vid: vid, p_src: /SHOPZENTApp/.test(navigator.userAgent) ? 'app' : 'web' }).catch(() => {}); } } catch {}
   try { if (page && page.startsWith('legal-')) await C.legalPage(page.slice(6)); else if (PAGES[page]) await PAGES[page](); }
   catch (e) { if (e && e.message === 'redirect') return; console.error(e); const m = document.getElementById('main'); if (m && !m.dataset.static) m.insertAdjacentHTML('afterbegin', '<div class="container"><div class="alert bad" style="margin-top:16px">Something went wrong loading this page. Please refresh. If it keeps happening, contact us on WhatsApp.</div></div>'); }
 })();
