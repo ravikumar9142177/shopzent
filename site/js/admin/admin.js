@@ -141,6 +141,12 @@ function bindFields(el, fields, folder) {
   });
   const sync = () => fields.forEach((f) => { if (f.show) { const w = el.querySelector(`[data-fk="${f.k}"]`); if (w) w.style.display = f.show(readFields(el, fields, true)) ? '' : 'none'; } });
   el.addEventListener('change', sync); sync();
+  // quick add: "➕ Naya brand" right under the Brand choice
+  const brSel = el.querySelector('#f_brand_id');
+  if (brSel && !el.querySelector('#szbr-add')) { brSel.insertAdjacentHTML('afterend', '<div style="margin-top:6px"><button type="button" class="btn xs sec" id="szbr-add">➕ Naya brand add karo</button><div id="szbr-box" style="display:none;margin-top:6px"><input id="szbr-name" maxlength="60" placeholder="Brand ka naam, jaise: boAt" style="max-width:260px"> <button type="button" class="btn xs" id="szbr-save">Save</button></div></div>');
+    const bx = el.querySelector('#szbr-box'); el.querySelector('#szbr-add').onclick = () => { bx.style.display = bx.style.display === 'none' ? '' : 'none'; el.querySelector('#szbr-name').focus(); };
+    el.querySelector('#szbr-save').onclick = async () => { const nm = el.querySelector('#szbr-name').value.trim(); if (nm.length < 2) return bad(new Error('Brand ka naam likho.'));
+      try { const row = await api.insert('brands', { name: nm, slug: (slugify(nm) || 'brand') + '-' + rnd4(), published: true, sort: 0 }); const o = document.createElement('option'); o.value = row.id; o.textContent = row.name; brSel.appendChild(o); brSel.value = row.id; el.querySelector('#szbr-name').value = ''; bx.style.display = 'none'; ok('Brand add ho gaya ✓'); } catch (x) { bad(x); } }; }
   // a new category choice sets the Sizes toggle to that category's default (the admin can still change it per product)
   const catSel = el.querySelector('#f_category_id'), sw = el.querySelector('#f_sizes_enabled');
   if (catSel && sw) catSel.addEventListener('change', () => { const c = (window.__szCats || []).find((x) => x.id === catSel.value); if (c) { sw.checked = !!c.has_sizes; sync(); } });
