@@ -5,14 +5,18 @@ import { $, $$, esc, inr, num, param, toast, modal, confirmBox, errText, fmtDate
 import { href, media, IC } from '../layout.js';
 import { enrollMfa } from '../pages/account.js';
 const MOD = document.body.dataset.module;
-const NAV = [['Dashboard & orders', [['dashboard', '📊', 'Dashboard'], ['visitors', '👀', 'Visitors & users'], ['sales', '💰', 'Sales / Orders amount'], ['orders', '📦', 'Orders'], ['returns', '↩️', 'Returns & refunds']]],
+const NAV = [['Requests & work', [['requests', '📥', 'Saare Requests (ek jagah)']]],
+  ['Dashboard & orders', [['dashboard', '📊', 'Dashboard'], ['visitors', '👀', 'Visitors & users'], ['sales', '💰', 'Sales / Orders amount']]],
   ['Shop', [['products', '🛍️', 'Products'], ['content', '🗂️', 'Categories & brands']]],
-  ['Money & coins', [['payments', '💳', 'Payment verification'], ['coupons', '🎟️', 'Coupons'], ['wallet', '👛', 'Customer wallets'], ['coins', '🪙', 'Coins'], ['cointransfers', '🔁', 'Coin transfer requests'], ['referrals', '🔗', 'Share rewards'], ['game-winners', '🏆', 'Game winners']]],
+  ['Money & coins', [['coupons', '🎟️', 'Coupons'], ['coins', '🪙', 'Coins'], ['referrals', '🔗', 'Share rewards']]],
   ['Content', [['festival', '🪔', 'Festival Studio'], ['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
   ['Settings & security', [['settings', '⚙️', 'Website settings'], ['domain', '🌐', 'Domain'], ['users', '👥', 'Users'], ['emailcheck', '📧', 'Email check'], ['reviews', '⭐', 'Reviews'], ['messages', '✉️', 'Messages'], ['security', '🛡️', 'Security & audit'], ['alerts', '🚨', 'Hacker alerts']]]];
+// these pages now live as tabs inside "Saare Requests" (their own URLs still work)
+const REQ_TABS = [['payments', '💳 Payment verification'], ['orders', '📦 Order confirm'], ['returns', '↩️ Returns & refunds'], ['cointransfers', '🔁 Coin requests'], ['game-winners', '🏆 Game winners'], ['wallet', '👛 Rupee / coin send']];
+const TITLES = NAV.flatMap((n) => n[1]).concat(REQ_TABS.map(([k, l]) => [k, '', l.replace(/^\S+\s/, '')]));
 let ME = null, FACTOR = null;
 const DEMO_ADMIN_EMAIL = String(window.SHOPZENT_CONFIG?.DEMO_ADMIN?.email || '').trim().toLowerCase(); // preview mode: the only admin email accepted
-const main = () => $('#adm-main');
+const main = () => window.__szSub && document.body.contains(window.__szSub) ? window.__szSub : $('#adm-main');
 // ---------- gate ----------
 async function gate() {
   const s = await api.auth.session(); if (!s) return false; ME = await api.auth.profile();
@@ -49,7 +53,7 @@ function shell() {
   document.body.innerHTML = `${DEMO ? '<div class="demo-bar">👀 <b>Preview mode</b> — admin panel running on demo data in this browser only.</div>' : ''}<div class="adm"><aside class="adm-side" id="side"><a href="dashboard.html" style="padding:6px 8px 12px"><img src="../assets/logo-lockup.png" alt="SHOPZENT" style="height:36px"></a>
     ${NAV.flatMap((n) => n[1]).map(([k, i, l]) => `<a href="${k}.html" class="${k === MOD ? 'active' : ''}"><span aria-hidden="true">${i}</span>${l}</a>`).join('')}
     <h5>Account</h5><a href="../index.html" target="_blank">🌐 View website</a><a href="../profile.html#security">🔐 My 2FA & recovery codes</a><a href="#" id="lo">🚪 Log out (sirf is device se)</a><a href="#" id="lo-all">🚪 Sabhi devices se log out</a></aside><div class="shade-adm" id="shade"></div>
-    <div><div class="adm-top"><button class="icon-btn" id="sb" style="display:grid" aria-label="Menu">${IC.menu}</button><b class="grow">${esc(NAV.flatMap((n) => n[1]).find((x) => x[0] === MOD)?.[2] || 'Admin')}</b><a class="tag" id="site-pill" href="dashboard.html" style="display:none"></a><a class="icon-btn" href="dashboard.html#notifications" aria-label="Notifications">${IC.bell}<span class="badge" id="nb"></span></a><span class="tag ${ME.role === 'super_admin' ? 'pink' : ''}">${esc(ME.role.replace('_', ' '))}</span></div>
+    <div><div class="adm-top"><button class="icon-btn" id="sb" style="display:grid" aria-label="Menu">${IC.menu}</button><b class="grow">${esc(TITLES.find((x) => x[0] === MOD)?.[2] || 'Admin')}</b><a class="tag" id="site-pill" href="dashboard.html" style="display:none"></a><a class="icon-btn" href="dashboard.html#notifications" aria-label="Notifications">${IC.bell}<span class="badge" id="nb"></span></a><span class="tag ${ME.role === 'super_admin' ? 'pink' : ''}">${esc(ME.role.replace('_', ' '))}</span></div>
     <main class="adm-main" id="adm-main"><div class="sk" style="height:200px"></div></main></div></div>`;
   const side = $('#side'), shade = $('#shade');
   side.querySelectorAll('[data-ag]').forEach((b) => b.onclick = () => { const wasOpen = b.parentElement.classList.contains('open'); side.querySelectorAll('.adm-ag').forEach((x) => { x.classList.remove('open'); x.querySelector('[data-ag]').setAttribute('aria-expanded', 'false'); }); if (!wasOpen) { b.parentElement.classList.add('open'); b.setAttribute('aria-expanded', 'true'); } }); // one group open at a time
@@ -59,9 +63,9 @@ function shell() {
   $('#lo-all').onclick = async (e) => { e.preventDefault(); if (!await confirmBox('Sabhi devices se log out?', 'Aapke saare phones/computers se admin login ek saath band ho jayega.', { ok: 'Sab se log out', danger: true })) return; try { await api.rpc('log_auth_event', { p_action: 'logout_all', p_details: {} }); } catch {} await api.auth.signOut(true); location.href = 'index.html'; };
   api.rpc('admin_site_status').then((s) => { const p = $('#site-pill'); if (!p) return; p.style.display = ''; p.className = 'tag ' + (s.published ? 'green' : 'red'); p.textContent = s.published ? '● LIVE' : '● CLOSED'; }).catch(() => {});
   api.rpc('admin_security_alert_counts').then((c) => { const a = document.querySelector('.adm-side a[href="alerts.html"]'); if (a && c.new_total) a.insertAdjacentHTML('beforeend', `<span class="tag ${c.new_high ? 'red' : 'pink'}" style="margin-left:auto">${c.new_total}</span>`); }).catch(() => {});
-  api.rpc('admin_game_pending_count').then((n) => { const a = document.querySelector('.adm-side a[href="game-winners.html"]'); if (a && n) a.insertAdjacentHTML('beforeend', `<span class="tag pink" style="margin-left:auto">${n}</span>`); }).catch(() => {});
+  api.rpc('admin_game_pending_count').then((n) => { const a = document.querySelector('.adm-side a[href="requests.html#game-winners"]'); if (a && n) a.insertAdjacentHTML('beforeend', `<span class="tag pink" style="margin-left:auto">${n}</span>`); }).catch(() => {});
   api.rpc('admin_notifications').then((n) => { const u = n.filter((x) => !x.read_at).length; $('#nb').textContent = u || ''; $('#nb').dataset.n = u; }).catch(() => {});
-  api.rpc('admin_coin_transfer_pending_count').then((n) => { const a = document.querySelector('.adm-side a[href="cointransfers.html"]'); if (a && Number(n) > 0) a.insertAdjacentHTML('beforeend', `<span class="tag pink" style="margin-left:auto">${Number(n)}</span>`); }).catch(() => {});
+  api.rpc('admin_coin_transfer_pending_count').then((n) => { const a = document.querySelector('.adm-side a[href="requests.html#cointransfers"]'); if (a && Number(n) > 0) a.insertAdjacentHTML('beforeend', `<span class="tag pink" style="margin-left:auto">${Number(n)}</span>`); }).catch(() => {});
 }
 // ---------- helpers ----------
 const ik = () => uuid();
@@ -195,7 +199,7 @@ const M = {};
 M.dashboard = async () => {
   const s = await api.rpc('admin_stats'); const notes = await api.rpc('admin_notifications').catch(() => []);
   const k = (v, l, g) => `<div class="kpi ${g ? 'g' : ''}"><b>${v}</b><span>${l}</span></div>`;
-  main().innerHTML = head('Dashboard', '<a class="btn sm" href="payments.html">Verify payments</a>') + `
+  main().innerHTML = head('Dashboard', '<a class="btn sm" href="requests.html#payments">Verify payments</a>') + `
   <div class="kpis">${k(num(s.payments_pending), 'Payments to verify', true)}${k(num(s.orders_pending), 'Pending orders')}${k(num(s.orders_confirmed), 'Confirmed orders')}${k(num(s.orders_paid), 'Paid orders')}${k(num(s.orders_rejected), 'Rejected orders')}${k(num(s.orders), 'Total orders')}
   ${k(num(s.users), 'Users')}${k(num(s.products_published) + ' / ' + num(s.products), 'Products live / total')}${k(num(s.coupon_redemptions), 'Coupon uses')}${k(inr(s.wallet_liability), 'Wallet liability (store credit)')}${k(num(s.affiliate_clicks), 'Affiliate clicks')}${k(num(s.ad_impressions) + ' / ' + num(s.ad_clicks), 'Ad impressions / clicks')}</div>
   <div class="grid g2" style="margin-top:16px"><div class="card pad" id="notifications"><h3>Notifications</h3>${notes.slice(0, 12).map((n) => `<div style="padding:8px 0;border-bottom:1px solid var(--line)" class="small ${n.read_at ? 'muted' : ''}"><b>${esc(n.title)}</b> — ${esc(n.body)}<div class="tiny muted">${fmtDate(n.created_at)} ${n.read_at ? '' : `<a href="#" data-nr="${esc(n.id)}">mark read</a>`} ${n.link ? `· <a href="${esc(safeUrl(n.link))}">open</a>` : ''}</div></div>`).join('') || '<p class="muted small">No notifications.</p>'}</div>
@@ -206,6 +210,20 @@ M.dashboard = async () => {
 };
 // ----- orders -----
 const STATUSES = ['payment_pending', 'payment_submitted', 'under_verification', 'payment_verified', 'payment_rejected', 'order_confirmed', 'processing', 'shipped', 'delivered', 'return_requested', 'return_approved', 'refund_processing', 'refund_completed', 'order_cancelled', 'order_rejected'];
+// ----- all requests in one place -----
+M.requests = async () => {
+  const wrap = main(); const hashTab = (location.hash || '').replace('#', ''); let cur = REQ_TABS.some((t) => t[0] === hashTab) ? hashTab : (sessionStorage.getItem('sz.reqtab') || 'payments');
+  wrap.innerHTML = head('Saare Requests') + '<div class="pill-tabs" id="rq-tabs" style="flex-wrap:wrap">' + REQ_TABS.map(([k, l]) => `<button type="button" class="chip" data-rq="${k}">${l}<span class="tag pink" data-rqc="${k}" style="display:none;margin-left:6px"></span></button>`).join('') + '</div><div id="rq-body" style="margin-top:14px"></div>';
+  const body = wrap.querySelector('#rq-body');
+  const show = async (k) => { cur = k; sessionStorage.setItem('sz.reqtab', k); history.replaceState(null, '', '#' + k); wrap.querySelectorAll('[data-rq]').forEach((b) => b.classList.toggle('active', b.dataset.rq === k));
+    const sub = document.createElement('div'); body.innerHTML = ''; body.appendChild(sub); window.__szSub = sub;
+    try { await M[k](); sub.querySelectorAll('h1').forEach((h) => { h.style.fontSize = '1.1rem'; }); } catch (x) { console.error(x); sub.insertAdjacentHTML('afterbegin', `<div class="alert bad">${esc(errText(x))}</div>`); } };
+  wrap.querySelector('#rq-tabs').onclick = (e) => { const b = e.target.closest('[data-rq]'); if (b) show(b.dataset.rq); };
+  api.rpc('admin_game_pending_count').then((n) => { const t = wrap.querySelector('[data-rqc="game-winners"]'); if (t && n) { t.textContent = n; t.style.display = ''; } }).catch(() => {});
+  api.rpc('admin_list_payments', { p_status: 'submitted' }).then((r) => { const t = wrap.querySelector('[data-rqc="payments"]'); if (t && r && r.length) { t.textContent = r.length; t.style.display = ''; } }).catch(() => {});
+  api.rpc('admin_list_returns', { p_status: 'return_requested' }).then((r) => { const t = wrap.querySelector('[data-rqc="returns"]'); if (t && Array.isArray(r) && r.length) { t.textContent = r.length; t.style.display = ''; } }).catch(() => {});
+  await show(cur);
+};
 M.orders = async () => {
   main().innerHTML = head('Orders', '<button class="btn sm sec" id="ox">Export CSV</button>') + `<div class="row" style="margin-bottom:12px"><input id="oq" type="search" placeholder="Order ID, Customer ID (SZC-…), mobile or email" style="max-width:380px" value="${esc(param('q') || '')}"><select id="os" style="width:auto"><option value="">All statuses</option>${STATUSES.map((s) => `<option value="${s}">${statusLabel(s)}</option>`).join('')}</select></div><div id="ol"></div>`;
   let rows = [];
@@ -240,7 +258,7 @@ async function orderModal(id, refresh) {
       ${pstate === 'pending' ? `<div class="alert warn small">Check your bank / UPI app: is there a credit of <b>${inr(ls.amount)}</b> with UTR <b>${esc(ls.utr_normalized)}</b>? Only approve if the money has actually arrived. A screenshot is not proof.</div><div class="row"><button class="btn ok sm" data-act="pay-success">✓ Approve (Success)</button><button class="btn danger sm" data-act="pay-reject">✕ Reject</button></div>`
         : `<div class="row"><button class="btn sec sm" data-act="pay-change">Change status</button><span class="tiny muted">Wrong tap? You can correct it with a reason${ME?.role === 'super_admin' ? '' : ' (within 7 days)'}.</span></div>`}
       <h4 style="margin:12px 0 4px">Payment status history</h4><ul class="timeline" id="phist"><li class="tiny muted">Loading…</li></ul></div>` : ''}
-    <h4 style="margin-top:14px">Order actions</h4><div class="row">${(o.payment_status === 'verified' && !['delivered', 'order_cancelled', 'order_rejected', 'payment_rejected', 'return_requested', 'return_approved', 'refund_processing', 'refund_completed'].includes(o.status)) ? '<button class="btn sm" data-act="deliv">Delivered ✓ confirm karein</button>' : ''}${next && next[0] !== 'delivered' ? `<button class="btn sm" data-act="next">${next[1]}</button>` : ''}${!closed ? '<button class="btn danger sm" data-act="ro">Reject order</button><button class="btn sec sm" data-act="co">Cancel order</button>' : ''}<button class="btn sec sm" data-act="ed">Edit address / notes</button><button class="btn ghost sm" data-act="note">Add internal note</button>${refundable > 0 ? `<a class="btn sec sm" href="returns.html">Refunds →</a>` : ''}</div>
+    <h4 style="margin-top:14px">Order actions</h4><div class="row">${(o.payment_status === 'verified' && !['delivered', 'order_cancelled', 'order_rejected', 'payment_rejected', 'return_requested', 'return_approved', 'refund_processing', 'refund_completed'].includes(o.status)) ? '<button class="btn sm" data-act="deliv">Delivered ✓ confirm karein</button>' : ''}${next && next[0] !== 'delivered' ? `<button class="btn sm" data-act="next">${next[1]}</button>` : ''}${!closed ? '<button class="btn danger sm" data-act="ro">Reject order</button><button class="btn sec sm" data-act="co">Cancel order</button>' : ''}<button class="btn sec sm" data-act="ed">Edit address / notes</button><button class="btn ghost sm" data-act="note">Add internal note</button>${refundable > 0 ? `<a class="btn sec sm" href="requests.html#returns">Refunds →</a>` : ''}</div>
     ${o.admin_notes ? `<p class="small" style="margin-top:8px"><b>Note to customer:</b> ${esc(o.admin_notes)}</p>` : ''}
     <h4 style="margin-top:14px">History</h4><ul class="timeline">${d.events.map((e) => `<li><b class="small">${esc(statusLabel(e.to_status))}</b> ${e.is_internal ? '<span class="tag gray">internal</span>' : ''}<div class="tiny muted">${fmtDate(e.created_at)} · ${esc(e.actor_role || '')}</div>${e.note ? `<div class="small">${esc(e.note)}</div>` : ''}</li>`).join('')}</ul>`, { wide: true });
   const el = m.el; const reload = async () => { m.close(); await refresh?.(); orderModal(id, refresh); };
