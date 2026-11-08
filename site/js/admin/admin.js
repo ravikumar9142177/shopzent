@@ -212,17 +212,24 @@ M.dashboard = async () => {
 const STATUSES = ['payment_pending', 'payment_submitted', 'under_verification', 'payment_verified', 'payment_rejected', 'order_confirmed', 'processing', 'shipped', 'delivered', 'return_requested', 'return_approved', 'refund_processing', 'refund_completed', 'order_cancelled', 'order_rejected'];
 // ----- all requests in one place -----
 M.requests = async () => {
-  const wrap = main(); const hashTab = (location.hash || '').replace('#', ''); let cur = REQ_TABS.some((t) => t[0] === hashTab) ? hashTab : (sessionStorage.getItem('sz.reqtab') || 'payments');
-  wrap.innerHTML = head('Saare Requests') + '<div class="pill-tabs" id="rq-tabs" style="flex-wrap:wrap">' + REQ_TABS.map(([k, l]) => `<button type="button" class="chip" data-rq="${k}">${l}<span class="tag pink" data-rqc="${k}" style="display:none;margin-left:6px"></span></button>`).join('') + '</div><div id="rq-body" style="margin-top:14px"></div>';
-  const body = wrap.querySelector('#rq-body');
-  const show = async (k) => { cur = k; sessionStorage.setItem('sz.reqtab', k); history.replaceState(null, '', '#' + k); wrap.querySelectorAll('[data-rq]').forEach((b) => b.classList.toggle('active', b.dataset.rq === k));
-    const sub = document.createElement('div'); body.innerHTML = ''; body.appendChild(sub); window.__szSub = sub;
-    try { await M[k](); sub.querySelectorAll('h1').forEach((h) => { h.style.fontSize = '1.1rem'; }); } catch (x) { console.error(x); sub.insertAdjacentHTML('afterbegin', `<div class="alert bad">${esc(errText(x))}</div>`); } };
-  wrap.querySelector('#rq-tabs').onclick = (e) => { const b = e.target.closest('[data-rq]'); if (b) show(b.dataset.rq); };
-  api.rpc('admin_game_pending_count').then((n) => { const t = wrap.querySelector('[data-rqc="game-winners"]'); if (t && n) { t.textContent = n; t.style.display = ''; } }).catch(() => {});
-  api.rpc('admin_list_payments', { p_status: 'submitted' }).then((r) => { const t = wrap.querySelector('[data-rqc="payments"]'); if (t && r && r.length) { t.textContent = r.length; t.style.display = ''; } }).catch(() => {});
-  api.rpc('admin_list_returns', { p_status: 'return_requested' }).then((r) => { const t = wrap.querySelector('[data-rqc="returns"]'); if (t && Array.isArray(r) && r.length) { t.textContent = r.length; t.style.display = ''; } }).catch(() => {});
-  await show(cur);
+  const wrap = main(); const hashTab = (location.hash || '').replace('#', '');
+  const ICON = { payments: '💳', orders: '📦', returns: '↩️', cointransfers: '🔁', 'game-winners': '🏆', wallet: '👛' };
+  const SUB = { payments: 'UTR check karke verify', orders: 'Verified order confirm karo', returns: 'Return / cancel requests', cointransfers: 'Coin transfer approve', 'game-winners': 'Winner photo + naam approve', wallet: 'Rupaya / coins bhejo' };
+  const counts = {};
+  const draw = () => { wrap.innerHTML = head('Saare Requests') + '<p class="small muted" style="margin:0 0 10px">Jis par <b style="color:#DC2626">lal number</b> hai, wahan naya kaam pending hai. Tap karo.</p><div class="szsec-grid">' + REQ_TABS.map(([k, l]) => { const n = counts[k] || 0; return `<button type="button" class="szsec" data-rq="${k}" style="${n ? 'border-color:#DC2626;box-shadow:0 6px 18px rgba(220,38,38,.18)' : ''}"><span class="szsec-ic" style="font-size:2rem;display:grid;place-items:center">${ICON[k]}</span><b class="small">${esc(l.replace(/^\S+\s/, ''))}</b><span class="tiny muted">${esc(SUB[k])}</span>${n ? `<span style="position:absolute;top:8px;right:8px;background:#DC2626;color:#fff;border-radius:999px;min-width:26px;height:26px;padding:0 7px;display:grid;place-items:center;font-weight:800;font-size:.8rem;box-shadow:0 2px 8px rgba(220,38,38,.5)">${n}</span>` : `<span class="tiny" style="color:#16A34A;font-weight:700">✓ Kuch pending nahi</span>`}</button>`; }).join('') + '</div>';
+    wrap.querySelectorAll('[data-rq]').forEach((b) => b.onclick = () => open(b.dataset.rq)); };
+  const open = async (k) => { history.replaceState(null, '', '#' + k);
+    wrap.innerHTML = `<div class="row" style="margin-bottom:10px;gap:8px;align-items:center"><button type="button" class="btn sm sec" id="rq-back">← Saare Requests</button><b>${ICON[k]} ${esc(REQ_TABS.find((t) => t[0] === k)[1].replace(/^\S+\s/, ''))}</b>${counts[k] ? `<span style="background:#DC2626;color:#fff;border-radius:999px;padding:2px 9px;font-weight:800;font-size:.8rem">${counts[k]} pending</span>` : ''}</div><div id="rq-body"></div>`;
+    wrap.querySelector('#rq-back').onclick = () => { window.__szSub = null; history.replaceState(null, '', location.pathname); load(); };
+    const sub = document.createElement('div'); wrap.querySelector('#rq-body').appendChild(sub); window.__szSub = sub;
+    try { await M[k](); sub.querySelectorAll('h1').forEach((h) => h.remove()); } catch (x) { console.error(x); sub.insertAdjacentHTML('afterbegin', `<div class="alert bad">${esc(errText(x))}</div>`); } };
+  const load = async () => { window.__szSub = null; draw();
+    const safe = (p) => p.catch(() => null);
+    const [g, pay, ret, cn, ord] = await Promise.all([safe(api.rpc('admin_game_pending_count')), safe(api.rpc('admin_list_payments', { p_status: 'submitted' })), safe(api.rpc('admin_list_returns', { p_status: 'return_requested' })), safe(api.rpc('admin_coin_transfer_pending_count')), safe(api.rpc('admin_list_orders', { p_q: null, p_status: 'payment_verified', p_limit: 200, p_offset: 0 }))]);
+    const len = (x) => Array.isArray(x) ? x.length : 0;
+    counts['game-winners'] = Number(g) || 0; counts.payments = len(pay); counts.returns = len(ret); counts.cointransfers = Number(cn) || 0; counts.orders = len(ord);
+    if (!window.__szSub) draw(); };
+  if (REQ_TABS.some((t) => t[0] === hashTab)) { await load(); await open(hashTab); } else await load();
 };
 M.orders = async () => {
   main().innerHTML = head('Orders', '<button class="btn sm sec" id="ox">Export CSV</button>') + `<div class="row" style="margin-bottom:12px"><input id="oq" type="search" placeholder="Order ID, Customer ID (SZC-…), mobile or email" style="max-width:380px" value="${esc(param('q') || '')}"><select id="os" style="width:auto"><option value="">All statuses</option>${STATUSES.map((s) => `<option value="${s}">${statusLabel(s)}</option>`).join('')}</select></div><div id="ol"></div>`;
