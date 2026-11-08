@@ -22,6 +22,7 @@ export async function home() {
     </div>
     <div class="hero-art" aria-hidden="true"><div class="float-card"><picture><source srcset="assets/banners/categories-suraj.webp" type="image/webp"><img src="assets/banners/categories-suraj.jpg" alt="" style="border-radius:14px" width="1080" height="691"></picture></div></div>
   </div></section>
+  <section class="sec" style="padding:0"><div class="container" id="h-ad-top"></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><a href="games.html" class="games-card"><span class="gc-ic" aria-hidden="true">🎮</span><span class="gc-tx"><b>Games</b><span>Free games khelo, aur Tap Rush me is hafte ke 3 winners ko coins</span></span><span class="gc-go">Play →</span></a></div></section>
   <section class="sec reveal"><div class="container"><div class="sec-h"><div><span class="eyebrow">Shop by category</span><h2>Categories</h2></div><a href="categories.html">View all →</a></div><div class="cats" id="h-cats">${'<div class="sk" style="height:110px"></div>'.repeat(6)}</div></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Budget picks</span><h2>Shop by price</h2></div></div><div class="price3d">${[[99,0,'#22C55E','#065F46','🛍️'],[199,100,'#0EA5E9','#1E3A8A','🎁'],[299,200,'#A855F7','#4C1D95','✨'],[499,300,'#F97316','#9A3412','🔥']].map(([m, lo, c1, c2, ic]) => `<a class="p3" href="products.html?max=${m}&min=${lo}" style="--c1:${c1};--c2:${c2}"><i class="p3-ic" aria-hidden="true">${ic}</i><small>UNDER</small><b>₹${m}</b><span>Dekho →</span></a>`).join('')}</div></div></section>
@@ -37,6 +38,7 @@ export async function home() {
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Top brands</span><h2>Brands</h2></div><a href="brands.html">All brands →</a></div><div class="brands" id="h-brands"></div></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Watch & learn</span><h2>Videos</h2></div><a href="videos.html">All videos →</a></div><div class="grid" id="h-videos"></div></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Digital</span><h2>Apps & downloads</h2></div><a href="apps.html">All apps →</a></div><div class="grid g3" id="h-apps"></div></div></section>
+  <section class="sec" style="padding-top:0"><div class="container" id="h-ad-bot"></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Why SHOPZENT</span><h2>Shop with confidence</h2></div></div><div class="why">
     <div class="card"><div class="ic">🔍</div><h3>Handpicked deals</h3><p class="small muted">Products and prices added and checked by our team — never made-up ratings or fake discounts.</p></div>
     <div class="card"><div class="ic">💳</div><h3>Simple UPI payment</h3><p class="small muted">Pay with any UPI app. Every payment is verified by a real person before your order is confirmed.</p></div>
@@ -69,7 +71,7 @@ export async function home() {
   const br = await brands(); $('#h-brands').innerHTML = br.slice(0, 12).map((b) => `<a class="brand-tile" href="products.html?brand=${encodeURIComponent(b.slug)}">${b.logo_url ? `<img loading="lazy" decoding="async" src="${esc(media(b.logo_url))}" alt="${esc(b.name)}" style="max-height:44px">` : esc(b.name)}</a>`).join('');
   const vids = await api.select('videos', { ...PUB, order: { col: 'sort', asc: true }, limit: 4 }); $('#h-videos').innerHTML = vids.map(videoCard).join('') || `<div class="empty3d"><span class="e3-ic" aria-hidden="true">🎬</span><b>Videos jaldi aa rahe hain</b><span>Naye product videos yahin milenge</span><a class="btn sm" href="products.html">Shop karein</a></div>`;
   const apps = await api.select('apps', { ...PUB, order: { col: 'updated_at', asc: false }, limit: 3 }); $('#h-apps').innerHTML = apps.map(appCard).join('') || `<div class="empty3d"><span class="e3-ic" aria-hidden="true">📲</span><b>Apps jaldi aa rahe hain</b><span>Naye apps yahin milenge</span><a class="btn sm" href="products.html">Shop karein</a></div>`;
-  adSlot($('#h-ad-mid'), 'home_mid');
+  adSlot($('#h-ad-mid'), 'home_mid'); adSlot($('#h-ad-top'), 'home_hero'); adSlot($('#h-ad-bot'), 'home_bottom');
   $('#nl').addEventListener('submit', async (e) => { e.preventDefault(); const em = e.target.email.value.trim(); try { await api.rpc('subscribe_newsletter', { p_email: em }); $('#nl-msg').textContent = 'Thanks! You are subscribed ✓'; e.target.reset(); } catch { $('#nl-msg').textContent = 'Please enter a valid email.'; } });
 }
 // Aaj ka coupon: the one PUBLIC coupon inside its show window (server decides; private codes never come here)
@@ -114,7 +116,7 @@ export async function listing(kind) {
     <select id="f-sort" aria-label="Sort"><option value="new">Newest</option><option value="popular">Popular</option><option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option><option value="discount">Biggest discount</option></select>
     <label class="chip"><input type="checkbox" id="f-stock"> In stock</label></div>
   <p class="small muted" id="count" aria-live="polite"></p><div class="grid" id="list">${skeletonCards(8)}</div><div class="center" style="margin:20px 0"><button class="btn sec" id="more" hidden>Load more</button></div></div>`;
-  if (kind === 'products') adSlot($('#ad-top'), 'products_top'); else $('#ad-top').remove();
+  if (kind === 'products') adSlot($('#ad-top'), 'products_top'); else adSlot($('#ad-top'), 'sidebar');
   if (param('sort')) $('#f-sort').value = param('sort');
   if (param('type') === 'direct') { $('#f-type').value = 'direct'; const h = $('.phead h1'); if (h && kind === 'products' && !cat && !br && !q) h.textContent = 'SHOPZENT Products'; }
   let all = [], shown = 24;
