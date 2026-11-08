@@ -1028,6 +1028,7 @@ M.sales = async () => {
 // ---------- boot ----------
 (async () => {
   if (MOD === 'login') { await loginPage(); return; }
+  if (REQ_TABS.some((t) => t[0] === MOD)) { location.replace('requests.html#' + MOD); return; }
   if (!(await gate())) { if (ME && !['admin', 'super_admin'].includes(ME.role)) { try { await api.rpc('log_security_event', { p_kind: 'admin_ui_denied', p_target: MOD || 'admin', p_details: { page: location.pathname } }); } catch { /* */ } } location.replace('index.html?next=' + encodeURIComponent(location.pathname.split('/').pop())); return; }
   shell(); try { await (M[MOD] || M.dashboard)(); } catch (x) { console.error(x); main().insertAdjacentHTML('afterbegin', `<div class="alert bad">${esc(errText(x))}</div>`); }
 })();
