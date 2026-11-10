@@ -12,7 +12,7 @@ const QA = [
   { q: 'Kisi se baat karni hai?', a: 'WhatsApp par 9942598154 par message kijiye, team jawab degi.', go: null },
 ];
 
-const hi = () => { const h = new Date().getHours(); return h < 12 ? 'Suprabhat' : h < 17 ? 'Namaskar' : h < 21 ? 'Shubh sandhya' : 'Shubh raatri'; };
+const hi = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night'; };
 const pickVoice = () => { try { const vs = speechSynthesis.getVoices() || []; return vs.find((v) => /hi[-_]IN/i.test(v.lang)) || vs.find((v) => /en[-_]IN/i.test(v.lang)) || vs.find((v) => /^hi/i.test(v.lang)) || null; } catch { return null; } };
 const speak = (t, hindi) => { try { if (!('speechSynthesis' in window)) return false; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); const v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = hindi ? 'hi-IN' : 'en-IN'; } u.rate = 0.95; u.pitch = 1.0; speechSynthesis.speak(u); return true; } catch { return false; } };
 
