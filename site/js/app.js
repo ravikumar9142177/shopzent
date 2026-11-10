@@ -50,6 +50,7 @@ function closedPage(st) {
   const page = document.body.dataset.page;
   const statusP = DEMO ? Promise.resolve(null) : api.rpc('public_site_status').catch(() => null); // runs beside the page's own first requests: no extra wait
   try { await chrome(); } catch (e) { console.error(e); }
+  try { (await import('./helper.js')).mountHelper(); } catch (e) { console.error(e); }
   watchForms();
   const st = await statusP;
   if (st && st.published === false) {
