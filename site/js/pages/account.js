@@ -17,7 +17,7 @@ const bindVerify = (email) => { const b = $('#vres'); if (!b) return; b.onclick 
   catch (x) { $('#vmsg').textContent = errText(x); setTimeout(() => { b.disabled = false; }, 15000); } }; };
 export async function login() {
   const p = await profile(); if (p && !param('mfa')) { location.replace(safeNext(param('next'))); return; }
-  main().innerHTML = `<div class="auth-wrap"><div class="auth-card"><div class="logo-c"><img src="assets/logo-lockup.png?v=3" alt="SHOPZENT"></div><h1 class="center" style="font-size:1.4rem">Welcome back</h1>
+  main().innerHTML = `<div class="auth-wrap"><div class="auth-card"><div class="logo-c"><img src="assets/logo-lockup.png?v=4" alt="SHOPZENT"></div><h1 class="center" style="font-size:1.4rem">Welcome back</h1>
   ${param('confirmed') ? '<div class="alert ok">Email confirmed — you can log in now.</div>' : ''}
   ${param('next') ? `<div class="alert small">🛒 Please log in to continue. <b>New to SHOPZENT? <a href="register.html?next=${encodeURIComponent(safeNext(param('next')))}">Register here</a></b> — it takes a minute, then you come straight back to your cart.</div>` : ''}
   <form id="lf" novalidate><div class="field"><label for="em">Email</label><input id="em" type="email" autocomplete="username" required maxlength="120"></div>
@@ -49,7 +49,7 @@ export async function login() {
   async function afterLogin() { const pr = await profile(); try { await api.rpc('log_auth_event', { p_action: 'login_success', p_details: {} }); } catch {} location.replace(safeNext(param('next'))); }
 }
 export async function register() {
-  main().innerHTML = `<div class="auth-wrap"><div class="auth-card"><div class="logo-c"><img src="assets/logo-lockup.png?v=3" alt="SHOPZENT"></div><h1 class="center" style="font-size:1.4rem">Create your account</h1>
+  main().innerHTML = `<div class="auth-wrap"><div class="auth-card"><div class="logo-c"><img src="assets/logo-lockup.png?v=4" alt="SHOPZENT"></div><h1 class="center" style="font-size:1.4rem">Create your account</h1>
   ${demoNote('Preview mode: accounts are saved only in this browser and are confirmed instantly.')}
   <form id="rf" novalidate><div class="field"><label for="fn">Full name</label><input id="fn" required maxlength="80" autocomplete="name"></div>
   <div class="field"><label for="em">Email</label><input id="em" type="email" required maxlength="120" autocomplete="email"></div>
@@ -68,13 +68,13 @@ export async function register() {
     catch (x) { $('#re').textContent = errText(x); $('#rb').disabled = false; } });
 }
 export async function forgot() {
-  main().innerHTML = `<div class="auth-wrap"><div class="auth-card"><div class="logo-c"><img src="assets/logo-lockup.png?v=3" alt="SHOPZENT"></div><h1 class="center" style="font-size:1.4rem">Forgot password</h1><p class="muted center small">Enter your email and we'll send a reset link (valid for a limited time).</p>
+  main().innerHTML = `<div class="auth-wrap"><div class="auth-card"><div class="logo-c"><img src="assets/logo-lockup.png?v=4" alt="SHOPZENT"></div><h1 class="center" style="font-size:1.4rem">Forgot password</h1><p class="muted center small">Enter your email and we'll send a reset link (valid for a limited time).</p>
   <form id="ff"><div class="field"><label for="em">Email</label><input id="em" type="email" required maxlength="120" autocomplete="email"></div><button class="btn block">Send reset link</button></form><p class="small center" style="margin-top:14px"><a href="login.html">Back to login</a></p></div></div>`;
   $('#ff').addEventListener('submit', async (e) => { e.preventDefault(); const em = $('#em').value.trim(); if (!/^\S+@\S+\.\S+$/.test(em)) return; try { await api.auth.sendReset(em); } catch {}
     $('#ff').outerHTML = '<div class="alert ok">If an account exists for that email, a password reset link is on its way. Check your inbox and spam folder.</div>'; });
 }
 export async function reset() {
-  main().innerHTML = `<div class="auth-wrap"><div class="auth-card"><div class="logo-c"><img src="assets/logo-lockup.png?v=3" alt="SHOPZENT"></div><h1 class="center" style="font-size:1.4rem">Set a new password</h1><div id="rs"></div></div></div>`;
+  main().innerHTML = `<div class="auth-wrap"><div class="auth-card"><div class="logo-c"><img src="assets/logo-lockup.png?v=4" alt="SHOPZENT"></div><h1 class="center" style="font-size:1.4rem">Set a new password</h1><div id="rs"></div></div></div>`;
   await new Promise((r) => setTimeout(r, 600)); const s = await api.auth.session();
   if (!s) { $('#rs').innerHTML = `<div class="alert bad">This reset link is invalid or has expired. Please request a new one.</div><a class="btn block" href="forgot-password.html">Request new link</a>`; return; }
   $('#rs').innerHTML = `<form id="nf"><div class="field"><label for="pw">New password</label><input id="pw" type="password" required maxlength="128" autocomplete="new-password"><span class="hint">At least 10 characters with letters and numbers.</span></div><div class="field"><label for="pw2">Confirm</label><input id="pw2" type="password" required maxlength="128" autocomplete="new-password"></div><p class="err" id="ne"></p><button class="btn block">Update password</button></form>`;
