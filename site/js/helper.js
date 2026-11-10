@@ -17,7 +17,7 @@ const pickVoice = () => { try { const vs = speechSynthesis.getVoices() || []; re
 let _mouthTimer = null;
 const mouthSet = (open) => { const m = document.getElementById('szm'); if (m) m.setAttribute('ry', open ? '5.5' : '2'); };
 const mouthStop = () => { if (_mouthTimer) { clearInterval(_mouthTimer); _mouthTimer = null; } mouthSet(false); };
-const speak = (t, hindi) => { try { if (!('speechSynthesis' in window)) return false; speechSynthesis.cancel(); mouthStop(); const u = new SpeechSynthesisUtterance(t); const v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = hindi ? 'hi-IN' : 'en-IN'; } u.rate = 0.95; u.pitch = 1.0;
+const speak = (t, hindi) => { try { if (!('speechSynthesis' in window)) return false; speechSynthesis.cancel(); mouthStop(); const u = new SpeechSynthesisUtterance(t); const v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = hindi ? 'hi-IN' : 'en-IN'; } u.rate = 1.1; u.pitch = 1.0;
   u.onstart = () => { let o = false; mouthStop(); _mouthTimer = setInterval(() => { o = !o; mouthSet(o); }, 150); };
   u.onend = mouthStop; u.onerror = mouthStop;
   speechSynthesis.speak(u); return true; } catch { return false; } };
@@ -47,5 +47,6 @@ export async function mountHelper() {
     say(item.a);
   });
   document.body.appendChild(btn); document.body.appendChild(panel);
-  if (!sessionStorage.getItem('sz.hello')) { sessionStorage.setItem('sz.hello', '1'); setTimeout(() => { if (!say(greet + ' Kuch help chahiye to mujhe tap kijiye.')) { const once = () => { say(greet); document.removeEventListener('pointerdown', once); }; document.addEventListener('pointerdown', once, { once: true }); } }, 900); }
+  const dayKey = 'sz.hello.' + new Date().toDateString();
+  if (!localStorage.getItem(dayKey)) { localStorage.setItem(dayKey, '1'); setTimeout(() => { if (!say(greet + ' Kuch help chahiye to mujhe tap kijiye.')) { const once = () => { say(greet); document.removeEventListener('pointerdown', once); }; document.addEventListener('pointerdown', once, { once: true }); } }, 900); }
 }
