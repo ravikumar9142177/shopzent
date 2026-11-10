@@ -83,8 +83,13 @@ export async function reset() {
 }
 // ---------- account shell ----------
 const ACC = [['dashboard.html', 'Dashboard'], ['orders.html', 'My Orders'], ['wallet.html', 'Wallet & Coins'], ['wishlist.html', 'Wishlist'], ['returns.html', 'Return / Refund'], ['profile.html', 'Profile & Security']];
-function shell(title, inner) { const here = location.pathname.split('/').pop(); return `<div class="phead"><div class="container"><div class="crumbs"><a href="index.html">Home</a> / <a href="dashboard.html">My account</a> / ${esc(title)}</div><h1>${esc(title)}</h1></div></div>
-  <div class="container acc"><nav class="acc-nav" aria-label="Account">${ACC.map(([h, l]) => `<a href="${h}" class="${h === here ? 'active' : ''}">${l}</a>`).join('')}<a href="#" data-logout>Log out</a><a href="#" data-logout-all>Log out all devices</a></nav><div id="acc-body">${inner}</div></div>`; }
+function shell(title, inner) { const here = location.pathname.split('/').pop();
+  // every account section gets the time-of-day greeting + name + SHOPZENT ID mark (filled after render; pages that already show one are skipped)
+  const slot = inner.includes('sz-greet') ? '' : '<div class="sz-hello-slot"></div>';
+  setTimeout(szFillSlots, 0);
+  return `<div class="phead"><div class="container"><div class="crumbs"><a href="index.html">Home</a> / <a href="dashboard.html">My account</a> / ${esc(title)}</div><h1>${esc(title)}</h1></div></div>
+  <div class="container acc"><nav class="acc-nav" aria-label="Account">${ACC.map(([h, l]) => `<a href="${h}" class="${h === here ? 'active' : ''}">${l}</a>`).join('')}<a href="#" data-logout>Log out</a><a href="#" data-logout-all>Log out all devices</a></nav><div id="acc-body">${slot}${inner}</div></div>`; }
+async function szFillSlots() { const els = document.querySelectorAll('.sz-hello-slot'); if (!els.length) return; const p = await profile().catch(() => null); els.forEach((el) => { if (p) el.outerHTML = szHello(p); else el.remove(); }); }
 export async function dashboard() {
   const p = await requireLogin(); const hr = new Date().getHours();
   const gr = hr >= 5 && hr < 12 ? 'Good morning ☀️' : hr >= 12 && hr < 17 ? 'Good afternoon 🌤️' : hr >= 17 && hr < 21 ? 'Good evening 🌆' : 'Good night 💤';
