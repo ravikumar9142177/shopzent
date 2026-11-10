@@ -5,7 +5,7 @@ import { api } from './api.js';
 import { $, esc, toast, inr, fmtDate, safeUrl } from './util.js';
 import { profile, settings, IC } from './layout.js';
 
-const SITE = 'https://qeuika.shop';
+const SITE = 'https://shopzent.shop';
 const REF_KEY = 'sz_ref';
 const WEEK = 7 * 24 * 3600 * 1000;
 

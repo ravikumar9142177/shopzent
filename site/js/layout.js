@@ -46,7 +46,7 @@ export async function categories() { if (!_cats) { try { _cats = await api.selec
 export async function brands() { if (!_brands) { try { _brands = await api.select('brands', { eq: { published: true }, order: { col: 'sort', asc: true } }); } catch { _brands = []; } } return _brands; }
 export async function wishlistIds() { if (_wish) return _wish; const p = await profile(); if (!p) { _wish = new Set(); return _wish; } try { _wish = new Set((await api.select('wishlist')).map((w) => w.product_id)); } catch { _wish = new Set(); } return _wish; }
 // share the SHOPZENT website itself (no reward)
-export async function shareSite() { const text = 'SHOPZENT — shopping ka naya address'; const url = 'https://qeuika.shop/';
+export async function shareSite() { const text = 'SHOPZENT — shopping ka naya address'; const url = 'https://shopzent.shop/';
   try { if (navigator.share) { await navigator.share({ title: 'SHOPZENT', text, url }); return; } } catch { return; }
   window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank', 'noopener'); }
 export async function toggleWish(id, btn) { const p = await profile(); if (!p) { toast('Please log in to save items to your wishlist.'); setTimeout(() => location.href = href('login.html?next=' + encodeURIComponent(location.pathname.split('/').pop() + location.search)), 900); return; }
