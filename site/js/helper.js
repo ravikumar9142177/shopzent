@@ -47,5 +47,13 @@ export async function mountHelper() {
     say(item.a);
   });
   document.body.appendChild(btn); document.body.appendChild(panel);
-  setTimeout(() => { if (!say(greet + ' Kuch help chahiye to mujhe tap kijiye.')) { const once = () => { say(greet); document.removeEventListener('pointerdown', once); }; document.addEventListener('pointerdown', once, { once: true }); } }, 900);
+  // Speak the greeting on arrival. Phones block speech until a tap, and speak() can return true while the phone silently blocks it,
+  // so the greeting also speaks on the first tap of this page load. Once per day for the arrival greeting.
+  const dayKey = 'sz.hello.' + new Date().toDateString();
+  const first = !localStorage.getItem(dayKey);
+  let spokeGreeting = false;
+  const greetOnce = () => { if (spokeGreeting) return; spokeGreeting = true; say(greet + (p ? '' : ' Sign up karein, 20 coins free milenge.')); };
+  if (first) { localStorage.setItem(dayKey, '1'); setTimeout(() => { if (!spokeGreeting) greetOnce(); }, 700); }
+  const tapGreet = () => { document.removeEventListener('pointerdown', tapGreet, true); if (!spokeGreeting) greetOnce(); };
+  if (first) document.addEventListener('pointerdown', tapGreet, true);
 }
