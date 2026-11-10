@@ -12,8 +12,9 @@ const QA = [
   { q: 'Kisi se baat karni hai?', a: 'WhatsApp par 9942598154 par message kijiye, team jawab degi.', go: null },
 ];
 
-const hi = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night'; };
-const speak = (t) => { try { if (!('speechSynthesis' in window)) return false; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'en-IN'; u.rate = 0.98; u.pitch = 1.05; speechSynthesis.speak(u); return true; } catch { return false; } };
+const hi = () => { const h = new Date().getHours(); return h < 12 ? 'Suprabhat' : h < 17 ? 'Namaskar' : h < 21 ? 'Shubh sandhya' : 'Shubh raatri'; };
+const pickVoice = () => { try { const vs = speechSynthesis.getVoices() || []; return vs.find((v) => /hi[-_]IN/i.test(v.lang)) || vs.find((v) => /en[-_]IN/i.test(v.lang)) || vs.find((v) => /^hi/i.test(v.lang)) || null; } catch { return null; } };
+const speak = (t, hindi) => { try { if (!('speechSynthesis' in window)) return false; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); const v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = hindi ? 'hi-IN' : 'en-IN'; } u.rate = 0.95; u.pitch = 1.0; speechSynthesis.speak(u); return true; } catch { return false; } };
 
 export async function mountHelper() {
   if (document.getElementById('sz-help')) return;
@@ -28,9 +29,9 @@ export async function mountHelper() {
   document.head.appendChild(css);
   const btn = document.createElement('button'); btn.id = 'sz-help-btn'; btn.setAttribute('aria-label', 'SHOPZENT help'); btn.innerHTML = '<svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="szy" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff6a0"/><stop offset=".55" stop-color="#ffd21f"/><stop offset="1" stop-color="#e0a400"/></radialGradient></defs><path d="M18 14 Q14 2 22 4 Q28 8 26 18 Z" fill="#ffd21f"/><path d="M46 14 Q50 2 42 4 Q36 8 38 18 Z" fill="#ffd21f"/><circle cx="32" cy="36" r="22" fill="url(#szy)"/><circle cx="24" cy="32" r="3.2" fill="#2b1a00"/><circle cx="40" cy="32" r="3.2" fill="#2b1a00"/><path d="M22 46 Q32 56 42 46" fill="#5a1a1a" stroke="#2b1a00" stroke-width="1.5"/><path d="M26 47 Q32 51 38 47" fill="#ff6b8b"/><ellipse cx="18" cy="42" rx="4" ry="2.6" fill="#ff7aa2" opacity=".8"/><ellipse cx="46" cy="42" rx="4" ry="2.6" fill="#ff7aa2" opacity=".8"/><ellipse cx="10" cy="40" rx="4" ry="6" fill="#ffd21f"/><ellipse cx="54" cy="40" rx="4" ry="6" fill="#ffd21f"/></svg>';
   const panel = document.createElement('div'); panel.id = 'sz-help'; panel.hidden = true;
-  const greet = name ? `${hi()}, ${name}!` : `${hi()}!`;
+  const greet = `${hi()}, team!`;
   panel.innerHTML = `<button class="x" aria-label="Close">×</button><div style="font-weight:800;margin-bottom:4px">${greet}</div><div style="font-size:13px;opacity:.85;margin-bottom:8px">Kya help chahiye? Koi sawal chuniye.</div>` + QA.map((x, i) => `<button class="q" data-i="${i}">${x.q}</button>`).join('') + `<div id="sz-ans"></div>`;
-  const say = (t) => { const ok = speak(t); return ok; };
+  const say = (t) => speak(t, true);
   btn.addEventListener('click', () => { panel.hidden = !panel.hidden; if (!panel.hidden) say(greet + ' Kya help chahiye?'); });
   panel.querySelector('.x').addEventListener('click', () => { panel.hidden = true; try { speechSynthesis.cancel(); } catch {} });
   panel.addEventListener('click', (e) => {
