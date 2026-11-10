@@ -333,13 +333,24 @@ ${(() => { const ls = subs[0]; if (!ls) return ''; const wa = waLink(s.contact?.
 }
 
 // ---------- wallet & coins ----------
+
+// Time-of-day greeting with the name on file + SHOPZENT ID mark (account pages only)
+export function szHello(p) {
+  const hr = new Date().getHours();
+  const gr = hr >= 5 && hr < 12 ? 'Good morning ☀️' : hr >= 12 && hr < 17 ? 'Good afternoon 🌤️' : hr >= 17 && hr < 21 ? 'Good evening 🌆' : 'Good night 💤';
+  const nm = p && p.full_name && String(p.full_name).trim();
+  if (!nm) return `<div class="card pad sz-greet" style="margin-bottom:14px"><div class="small" style="opacity:.9">${gr}</div><div class="small">Apna naam set karke SHOPZENT ID lo — <a href="profile.html" style="color:#fff;text-decoration:underline">Profile me naam daalo</a></div></div>`;
+  return `<div class="card pad sz-greet" style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div class="small" style="opacity:.9;width:100%">${gr}</div><b style="font-size:1.15rem;color:#fff">${esc(nm)}</b><span class="sz-badge" aria-hidden="true"><svg viewBox="0 0 64 64" width="34" height="34"><defs><linearGradient id="szg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7ad9"/><stop offset=".55" stop-color="#ff2e97"/><stop offset="1" stop-color="#ffb347"/></linearGradient></defs><path d="M10 14 L40 4 L54 16 L46 34 L58 50 L24 60 L6 44 L18 30 Z" fill="url(#szg2)"/><path d="M24 22 L38 18 L34 28 L44 30 L28 46 L32 36 L22 34 Z" fill="#fff" opacity=".92"/></svg></span></div>`;
+}
+
 export async function walletPage() {
-  if (!(await profile())) { // logged-out visitors see a wallet preview; the number is display-only (no account, nothing can be spent)
+  const pf = await profile();
+  if (!pf) { // logged-out visitors see a wallet preview; the number is display-only (no account, nothing can be spent)
     main().innerHTML = `<div class="phead"><div class="container"><div class="crumbs"><a href="index.html">Home</a> / Wallet</div><h1>Wallet &amp; Coins</h1></div></div><div class="container" style="padding:18px 0 30px"><div class="idcard"><div class="tiny" style="opacity:.85">🪙 SHOPZENT coins</div><div style="font-size:2.4rem;font-weight:800">10,649</div><div class="tiny" style="opacity:.85;margin-top:6px">Login karke apne asli coins dekhein</div></div>
       <div class="card pad" style="margin-top:14px"><p class="small">Naye member ko <b>20 coins free</b> welcome bonus milta hai, sign up karte hi wallet me. Login ke baad yahan sirf aapke asli coins dikhenge.</p><div class="row" style="margin-top:10px"><a class="btn" href="login.html?next=wallet.html" style="color:#fff">Log in</a><a class="btn sec" href="register.html">Sign up</a></div></div></div>`;
     return;
   }
-  await requireLogin(); main().innerHTML = shell('Wallet & Coins', '<div id="wb">Loading…</div>'); bindLogout();
+  await requireLogin(); main().innerHTML = shell('Wallet & Coins', `${szHello(pf)}<div id="wb">Loading…</div>`); bindLogout();
   const [w, c, led, coinsLed] = await Promise.all([api.rpc('my_wallet'), api.rpc('my_coins').catch(() => null), api.select('wallet_ledger', { order: { col: 'created_at', asc: false }, limit: 200 }), api.select('coin_ledger', { order: { col: 'created_at', asc: false }, limit: 100 }).catch(() => [])]);
   const kindName = { return_credit: 'Return credit', promo_credit: 'Promotional credit', admin_adjust: 'Adjustment', purchase_debit: 'Used on order', reversal: 'Reversal / returned', refund_credit: 'Refund as store credit' };
   const WKIND = { return_credit: '↩️', promo_credit: '🎁', admin_adjust: '⚙️', purchase_debit: '🛍️', reversal: '↩️', refund_credit: '💸' };
