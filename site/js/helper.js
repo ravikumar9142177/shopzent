@@ -47,6 +47,5 @@ export async function mountHelper() {
     say(item.a);
   });
   document.body.appendChild(btn); document.body.appendChild(panel);
-  const dayKey = 'sz.hello.' + new Date().toDateString();
-  if (!localStorage.getItem(dayKey)) { localStorage.setItem(dayKey, '1'); setTimeout(() => { if (!say(greet + ' Kuch help chahiye to mujhe tap kijiye.')) { const once = () => { say(greet); document.removeEventListener('pointerdown', once); }; document.addEventListener('pointerdown', once, { once: true }); } }, 900); }
+  setTimeout(() => { if (!say(greet + ' Kuch help chahiye to mujhe tap kijiye.')) { const once = () => { say(greet); document.removeEventListener('pointerdown', once); }; document.addEventListener('pointerdown', once, { once: true }); } }, 900);
 }
