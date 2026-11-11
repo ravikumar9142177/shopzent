@@ -8,7 +8,46 @@ const PUB = { eq: { published: true } };
 
 // Time-limited deal strip (15 Nov 00:00 IST end). Products are the shop's own listings; prices come from the database.
 const DEAL_END = Date.parse('2026-11-14T18:30:00Z');
-const DEAL_IDS = ['e16d8940-a01e-49f7-8a41-0457ca6c13d5', 'c5182844-ba9f-48cc-9a44-df4fcf8b4db8', 'f1ea9053-1c74-4abf-8a8c-d256558bef46', '2620a970-d81e-4400-b958-1078c1aa74c9', '0699a527-83a8-4819-920d-aef972d906ae'];
+const DEAL_IDS = [
+  'f2718220-8898-4685-a332-a93f15d3a5d1',
+  'bcc89fc8-7ce5-4d3c-af61-eba3e05c7c35',
+  '31afab07-5cab-4be0-9406-56ac664c4e03',
+  'bddd8f16-53c7-4063-b4d7-4a6a08d7729b',
+  '7c6c7594-4b39-46f7-8604-fc325e2746b3',
+  'c5182844-ba9f-48cc-9a44-df4fcf8b4db8',
+  '721a9aef-8046-4bb6-8b9f-0b3c7e495e4a',
+  '98cb2384-8cc8-422e-8420-162a936ad641',
+  'f7f7933d-4df9-4bce-8f2c-045963b3e1d1',
+  'fc743522-de7f-40c5-b750-f1b49a28042a',
+  '4632a3d3-a876-4533-be96-f2671f55175c',
+  'f1ea9053-1c74-4abf-8a8c-d256558bef46',
+  'f43fb6fd-2922-40b4-bedd-35981a67c9af',
+  '3e3e0d39-3eec-4867-9b58-5028ac870588',
+  '2620a970-d81e-4400-b958-1078c1aa74c9',
+  'b282f2a8-0973-4b33-9ac4-deb8610f9f0c',
+  'ee78109c-f97e-4cbd-aa2d-798c4c8aa444',
+  'e16d8940-a01e-49f7-8a41-0457ca6c13d5',
+  'afd255f8-f723-469f-b932-75426e8ea3b3',
+  '91b3cbcc-83d0-4d38-b5c7-15f37bbf85da',
+  '90afd7fc-571e-4b29-9014-24696b5154d4',
+  'c425df62-ec38-4b58-8ff7-b9c2a15f4398',
+  'ec19aad3-8cae-443e-bcba-984baed17c87',
+  '97f5a953-d836-45a7-ace2-4bf90abc3a90',
+  'fce5b841-cf01-4555-b34f-e4035ab915bb',
+  '4c7c6b01-45cd-457b-ab0b-26fd595ba1d2',
+  '729bbde9-9997-476e-804f-fb661c56fa12',
+  '2ad73a55-17af-4490-9a63-965e333e882d',
+  'dc24fb06-bd3a-46aa-a780-d25805013811',
+  'dfbaf7dd-dafe-4a2f-b29f-c28b2658ae07',
+  '5b7158a4-877b-47e3-b125-b34ea41adcda',
+  '5ae48972-ff9d-46eb-9a5c-c0f134606112',
+  'ed0b11e5-7a6b-4762-b3c5-75216621217a',
+  '0a133516-0f8c-473c-ac89-7411a6e1d1f3',
+  'c4c69b56-535f-43d4-bedb-b15829a8b772',
+  '021195d5-dfa3-46d3-b22c-1ecae2e9dbf1',
+  'ecfa3a9f-60d0-4ee7-9ad4-e79975780d67',
+  '6f7cfacc-bdd5-4124-992a-bffe3a0ae9dd'
+];
 async function dealStrip() {
   const sec = $('#deal-sec'); if (!sec || Date.now() >= DEAL_END) return;
   try {
@@ -16,7 +55,7 @@ async function dealStrip() {
     const list = await decorate(rows);
     if (!list.length) return;
     sec.hidden = false;
-    sec.innerHTML = `<div class="container"><div class="sec-h"><div><span class="eyebrow">Chhath deal · 15 Nov raat 12 baje tak</span><h2>Best deals, scroll karo</h2></div><a href="products.html">Sab products →</a></div><div class="deal-track" id="deal-track">${list.map((p) => `<div class="deal-item">${productCard(p, new Set())}</div>`).join('')}</div><p class="tiny muted">Checkout par coupon CMP15S lagao, 15% aur off milega.</p></div>`;
+    sec.innerHTML = `<div class="container"><div class="sec-h"><div><span class="eyebrow">Chhath deal · 15 Nov raat 12 baje tak</span><h2>70% se zyada off, scroll karo</h2></div><a href="products.html">Sab products →</a></div><div class="deal-track" id="deal-track">${list.map((p) => `<div class="deal-item">${productCard(p, new Set())}</div>`).join('')}</div><p class="tiny muted">Checkout par coupon CMP15S lagao, 15% aur off milega.</p></div>`;
     const tr = $('#deal-track'); let i = 0;
     if (tr && !matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(() => { if (document.hidden) return; i = (i + 1) % list.length; const c = tr.children[i]; if (c) tr.scrollTo({ left: c.offsetLeft - tr.offsetLeft, behavior: 'smooth' }); }, 3500);
   } catch (e) { sec.hidden = true; }
