@@ -161,6 +161,7 @@ export async function chrome() {
     <p class="disclosure">SHOPZENT participates in affiliate marketing programs. Some links on this website are affiliate links. We may earn a commission from qualifying purchases made through these links, at no additional cost to you. Wallet balance and coins are SHOPZENT store credit / loyalty points only — not money, not a bank account and not withdrawable.</p>
     <div class="ftr-bottom"><span>© ${year} SHOPZENT. All rights reserved.</span><span><a href="${href('admin/index.html')}">🔐 Admin login</a></span></div></div>`;
   document.body.appendChild(f);
+  footerTeam(f);
   // App-style bottom tab bar (phone). Hidden where it would get in the way: checkout, payment, login and account-recovery pages.
   if (!NO_TAB_BAR.includes(page) && !here.startsWith('admin')) {
     const bn = document.createElement('nav'); bn.className = 'bnav'; bn.setAttribute('aria-label', 'Quick');
@@ -178,6 +179,21 @@ export async function chrome() {
   updateBadges(); reveal(); initTilt();
   festivalHook(s, page);
   import('./visualsearch.js').then((m) => m.initCameraSearch()).catch(() => {});
+}
+// Team section in the footer (migration 0044): the people the admin made visible, in their order. Nothing renders when there are none.
+export const teamCardHtml = (m) => {
+  const src = media(m.photo_url); const name = String(m.name || '').trim();
+  const ini = name.split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase();
+  return `<article class="tm-card"><div class="tm-photo">${src ? `<img src="${esc(src)}" alt="${esc(name)}" loading="lazy" decoding="async" width="240" height="240">` : `<span class="tm-ini" aria-hidden="true">${esc(ini)}</span>`}</div><p class="tm-name">${esc(name)}</p>${m.role ? `<p class="tm-role">${esc(m.role)}</p>` : ''}</article>`;
+};
+async function footerTeam(f) {
+  let rows = [];
+  try { rows = await api.select('team_members', { eq: { visible: true }, order: { col: 'rank', asc: true }, limit: 200 }); } catch { return; }
+  rows = (rows || []).filter((m) => m && String(m.name || '').trim()).sort((a, b) => (a.rank ?? 9) - (b.rank ?? 9) || (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  if (!rows.length) return;
+  const box = document.createElement('section'); box.className = 'ftr-team'; box.setAttribute('aria-labelledby', 'ftr-team-h');
+  box.innerHTML = `<div class="container"><h2 class="ftr-team-h" id="ftr-team-h">Our Team</h2><div class="tm-grid">${rows.map(teamCardHtml).join('')}</div></div>`;
+  const dis = f.querySelector('.disclosure'); if (dis) dis.before(box); else f.appendChild(box);
 }
 // Festival Studio (migration 0031/0032): the festival code loads only while a festival is on and inside its window, never on /admin/.
 function festivalHook(s, page) { try { const f = s.festival; if (!f || f.enabled !== true || location.pathname.includes('/admin/')) return;

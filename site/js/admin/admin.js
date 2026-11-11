@@ -2,14 +2,14 @@
 // an admin role AND a 2FA-verified (aal2) session). Hiding a button is never the security boundary.
 import { api, DEMO, config } from '../api.js';
 import { $, $$, esc, inr, num, param, toast, modal, confirmBox, errText, fmtDate, uuid, checkFile, waLink, statusTag, statusLabel, safeUrl, slugify, sanitizeHtml } from '../util.js';
-import { href, media, IC } from '../layout.js';
+import { href, media, IC, teamCardHtml } from '../layout.js';
 import { enrollMfa } from '../pages/account.js';
 const MOD = document.body.dataset.module;
 const NAV = [['Requests & work', [['requests', '📥', 'Saare Requests (ek jagah)']]],
   ['Dashboard & orders', [['dashboard', '📊', 'Dashboard'], ['visitors', '👀', 'Visitors & users'], ['sales', '💰', 'Sales / Orders amount']]],
   ['Shop', [['products', '🛍️', 'Products'], ['content', '🗂️', 'Categories & brands']]],
   ['Money & coins', [['coupons', '🎟️', 'Coupons'], ['coins', '🪙', 'Coins'], ['referrals', '🔗', 'Share rewards']]],
-  ['Content', [['festival', '🪔', 'Festival Studio'], ['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements']]],
+  ['Content', [['festival', '🪔', 'Festival Studio'], ['videos', '🎬', 'Videos'], ['apps', '📲', 'Apps & APKs'], ['ads', '📣', 'Advertisements'], ['team', '🧑‍💼', 'Team (footer)']]],
   ['Settings & security', [['settings', '⚙️', 'Website settings'], ['domain', '🌐', 'Domain'], ['users', '👥', 'Users'], ['emailcheck', '📧', 'Email check'], ['reviews', '⭐', 'Reviews'], ['messages', '✉️', 'Messages'], ['security', '🛡️', 'Security & audit'], ['alerts', '🚨', 'Hacker alerts']]]];
 // these pages now live as tabs inside "Saare Requests" (their own URLs still work)
 const REQ_TABS = [['payments', '💳 Payment verification'], ['orders', '📦 Order confirm'], ['returns', '↩️ Returns & refunds'], ['cointransfers', '🔁 Coin requests'], ['game-winners', '🏆 Game winners'], ['wallet', '👛 Rupee / coin send']];
@@ -675,6 +675,55 @@ M.visitors = async () => {
   const loadAll = async () => { await load(); await placeRender(); };
   $('#vg').onclick = loadAll; $$('[data-q]').forEach((b) => b.onclick = () => { $('#vf').value = ist(new Date(Date.now() - Number(b.dataset.q) * 864e5)); $('#vt').value = today; loadAll(); });
   await loadAll();
+};
+// Team section (migration 0044): the people shown in the website footer, by rank (1 = Chairman, lower first), then order.
+// Only visible rows show there; the database decides who may write.
+const TEAM_POSTS = [['Chairman', 1], ['Managing Director', 2], ['CEO', 3], ['Founder', 4], ['Director', 5], ['Investor', 6], ['Manager', 7], ['Other', 9]];
+const teamRankOf = (post) => (TEAM_POSTS.find(([p]) => p === post) || [null, 9])[1];
+const teamSort = (rows) => [...rows].sort((a, b) => (a.rank ?? 9) - (b.rank ?? 9) || (a.sort_order ?? 0) - (b.sort_order ?? 0));
+M.team = async () => {
+  const R = main(); let ROWS = [];
+  const toInt = (v, lo, hi, dflt) => { const n = Number.parseInt(v, 10); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : dflt; };
+  const openForm = (row) => {
+    const preset = row ? (TEAM_POSTS.some(([p]) => p === row.role) ? row.role : 'Custom') : '';
+    const opts = [['', 'Choose a post…'], ...TEAM_POSTS.map(([p]) => [p, p]), ['Custom', 'Custom (type the title)']];
+    modal(`<div class="row between"><h3 style="margin:0">${row ? 'Edit person' : 'Add person'}</h3><button class="btn ghost sm" data-close aria-label="Close">✕</button></div>
+      <form id="tmf" novalidate style="margin-top:12px"><div class="form-grid">
+        <div class="field full"><label for="tm_name">Name *</label><input id="tm_name" maxlength="120" value="${esc(row?.name || '')}"></div>
+        <div class="field"><label for="tm_post">Post</label><select id="tm_post">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === preset ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+        <div class="field"><label for="tm_role">Post title on the site *</label><input id="tm_role" maxlength="120" value="${esc(row?.role || (preset && preset !== 'Custom' ? preset : ''))}" placeholder="e.g. Managing Director"></div>
+        <div class="field"><label for="tm_rank">Rank (lower shows first)</label><input id="tm_rank" type="number" min="0" max="999" step="1" value="${esc(row?.rank ?? teamRankOf(preset))}"><span class="tiny muted">Post chunne par rank apne aap aata hai. Badalna ho to yahan likho (1 = sabse upar).</span></div>
+        <div class="field"><label for="tm_order">Order within the same rank</label><input id="tm_order" type="number" min="0" max="100000" step="1" value="${esc(row?.sort_order ?? 0)}"></div>
+        <div class="field full"><label for="tm_file">Photo</label><input id="tm_file" type="file" accept="image/png,image/jpeg,image/webp"><input id="tm_photo" type="text" placeholder="or paste an https:// image URL" value="${esc(row?.photo_url || '')}" style="margin-top:6px"></div>
+        <div class="field full"><label class="row" style="gap:8px;font-weight:600"><input type="checkbox" id="tm_vis" ${row?.visible === false ? '' : 'checked'}> Show in the website footer</label></div>
+      </div><p class="err" id="tme"></p><div class="row" style="justify-content:flex-end"><button type="button" class="btn sec sm" data-close>Cancel</button><button class="btn sm" id="tms">Save</button></div></form>`,
+      { wide: true, onOpen: (el, close) => {
+        el.querySelector('#tm_post').onchange = (e) => { const v = e.target.value; if (v && v !== 'Custom') { el.querySelector('#tm_role').value = v; el.querySelector('#tm_rank').value = teamRankOf(v); } };
+        el.querySelector('#tm_file').onchange = async (e) => { try { const u = await uploadImage(e.target, 'team'); if (u) { el.querySelector('#tm_photo').value = u; ok('Photo uploaded'); } } catch (x) { bad(x); } };
+        el.querySelector('#tmf').onsubmit = async (e) => { e.preventDefault(); const btn = el.querySelector('#tms'), err = el.querySelector('#tme');
+          const body = { name: String(el.querySelector('#tm_name').value || '').trim().slice(0, 120), role: String(el.querySelector('#tm_role').value || '').trim().slice(0, 120),
+            rank: toInt(el.querySelector('#tm_rank').value, 0, 999, 9), sort_order: toInt(el.querySelector('#tm_order').value, 0, 100000, 0),
+            photo_url: safeUrl(el.querySelector('#tm_photo').value, false) || null, visible: !!el.querySelector('#tm_vis').checked };
+          if (!body.name) { err.textContent = 'Name is required.'; return; }
+          if (!body.role) { err.textContent = 'Post title is required (choose a post or type one).'; return; }
+          btn.disabled = true;
+          try { if (row) await api.update('team_members', row.id, body); else await api.insert('team_members', body); close(); ok(row ? 'Saved ✓' : 'Added ✓'); draw(); }
+          catch (x) { err.textContent = errText(x); btn.disabled = false; } };
+      } });
+  };
+  const cardActions = (r) => `<p class="tiny muted" style="text-align:center;margin:8px 0 6px">Rank ${num(r.rank ?? 9)} · Order ${num(r.sort_order ?? 0)} · ${r.visible ? '<span class="tag green">Footer par dikhega</span>' : '<span class="tag gray">Hidden</span>'}</p><div class="row" style="justify-content:center;gap:6px"><button class="btn xs sec" data-ed="${esc(r.id)}">Edit</button><button class="btn xs ghost" data-del="${esc(r.id)}" aria-label="Delete">🗑️ Delete</button></div>`;
+  const draw = async () => {
+    ROWS = teamSort(await api.select('team_members', { order: { col: 'rank', asc: true }, limit: 500 }));
+    R.querySelector('.ct').innerHTML = ROWS.length
+      ? `<div class="tm-adm">${ROWS.map((r) => `<div class="tm-adm-item">${teamCardHtml(r)}${cardActions(r)}</div>`).join('')}</div>`
+      : '<div class="card pad small muted">Abhi koi member nahi hai. “+ Add person” dabao. Jo members visible honge, wahi website ke footer mein dikhenge.</div>';
+  };
+  R.innerHTML = head('Team (footer)', '<button class="btn sm cn">+ Add person</button>') + '<p class="small muted" style="margin:0 0 14px">Footer mein rank ke hisaab se dikhega (Chairman sabse upar, phir MD, CEO…), same rank mein order se. Khali box nahi dikhega.</p><div class="ct"><div class="sk" style="height:200px"></div></div>';
+  R.querySelector('.cn').onclick = () => openForm(null);
+  R.querySelector('.ct').onclick = async (e) => { const ed = e.target.closest('[data-ed]'), de = e.target.closest('[data-del]');
+    if (ed) { const r = ROWS.find((x) => x.id === ed.dataset.ed); if (r) openForm(r); }
+    if (de) { if (!await confirmBox('Remove this person?', 'They disappear from the footer right away. This cannot be undone.', { ok: 'Remove', danger: true })) return; try { await api.remove('team_members', de.dataset.del); ok('Removed'); draw(); } catch (x) { bad(x); } } };
+  await draw();
 };
 M.festival = async () => (await import('./festival-studio.js')).renderFestivalStudio({ main, head, call, ok, bad });
 M['game-winners'] = async () => {
