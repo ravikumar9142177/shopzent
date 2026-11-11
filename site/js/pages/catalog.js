@@ -6,6 +6,22 @@ import { captureRef, shareContext, shareBlockHtml, wireShare, loadReviews } from
 const main = () => $('#main');
 const PUB = { eq: { published: true } };
 
+// Time-limited deal strip (15 Nov 00:00 IST end). Products are the shop's own listings; prices come from the database.
+const DEAL_END = Date.parse('2026-11-14T18:30:00Z');
+const DEAL_IDS = ['e16d8940-a01e-49f7-8a41-0457ca6c13d5', 'c5182844-ba9f-48cc-9a44-df4fcf8b4db8', 'f1ea9053-1c74-4abf-8a8c-d256558bef46', '2620a970-d81e-4400-b958-1078c1aa74c9', '0699a527-83a8-4819-920d-aef972d906ae'];
+async function dealStrip() {
+  const sec = $('#deal-sec'); if (!sec || Date.now() >= DEAL_END) return;
+  try {
+    const rows = (await Promise.all(DEAL_IDS.map((id) => api.select('products', { eq: { id } }).then((r) => r && r[0]).catch(() => null)))).filter(Boolean);
+    const list = await decorate(rows);
+    if (!list.length) return;
+    sec.hidden = false;
+    sec.innerHTML = `<div class="container"><div class="sec-h"><div><span class="eyebrow">Chhath deal · 15 Nov raat 12 baje tak</span><h2>Best deals, scroll karo</h2></div><a href="products.html">Sab products →</a></div><div class="deal-track" id="deal-track">${list.map((p) => `<div class="deal-item">${productCard(p, new Set())}</div>`).join('')}</div><p class="tiny muted">Checkout par coupon CMP15S lagao, 15% aur off milega.</p></div>`;
+    const tr = $('#deal-track'); let i = 0;
+    if (tr && !matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(() => { if (document.hidden) return; i = (i + 1) % list.length; const c = tr.children[i]; if (c) tr.scrollTo({ left: c.offsetLeft - tr.offsetLeft, behavior: 'smooth' }); }, 3500);
+  } catch (e) { sec.hidden = true; }
+}
+
 export async function home() {
   const s = await settings(); const h = s.home || {};
   main().innerHTML = `
@@ -32,6 +48,7 @@ export async function home() {
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Save more</span><h2>Best deals</h2></div><a href="deals.html">See all →</a></div><div class="grid" id="h-deals">${skeletonCards(4)}</div></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container" id="h-ad-mid"></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Editor's picks</span><h2>Featured products</h2></div><a href="featured.html">See all →</a></div><div class="scroller" id="h-featured">${skeletonCards(4)}</div></div></section>
+  <section class="sec reveal" id="deal-sec" hidden></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Collections</span><h2>Featured collections</h2></div></div><div class="grid g3" id="h-coll"></div></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Loved by shoppers</span><h2>Popular products</h2></div><a href="products.html?sort=popular">See all →</a></div><div class="scroller" id="h-popular">${skeletonCards(4)}</div></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="sec-h"><div><span class="eyebrow">Just in</span><h2>Latest products</h2></div><a href="products.html?sort=new">See all →</a></div><div class="scroller" id="h-latest">${skeletonCards(4)}</div></div></section>
@@ -50,6 +67,7 @@ export async function home() {
       <form id="nl"><input type="email" name="email" required placeholder="your@email.com" aria-label="Email" maxlength="120"><button class="btn">Subscribe</button></form><p class="err" id="nl-msg" style="position:relative;z-index:1;color:#FDE68A"></p></div></div></div></section>
   <section class="sec reveal" style="padding-top:0"><div class="container"><div class="card pad row between"><div><h3 style="margin:0">Need help?</h3><p class="muted small" style="margin:0">WhatsApp +91 ${esc(s.contact.whatsapp)} · ${esc(s.contact.email)}</p></div><div class="row"><a class="btn wa sm" target="_blank" rel="noopener" href="${waLink(s.contact.whatsapp, 'Hi SHOPZENT')}">${IC.wa.replace('<svg', '<svg width="18" height="18"')} WhatsApp</a><a class="btn sec sm" href="mailto:${esc(s.contact.email)}">Email us</a></div></div></div></section>`;
   reveal();
+  dealStrip();
   const cats = await categories();
   { const tr = $('#offer-track'), dots = [...document.querySelectorAll('#offer-dots i')]; if (tr && dots.length) { let i = 0, hold = false;
     const go = (n) => { const c = tr.children[n]; if (c) tr.scrollTo({ left: c.offsetLeft - tr.offsetLeft - (tr.clientWidth - c.clientWidth) / 2, behavior: 'smooth' }); };

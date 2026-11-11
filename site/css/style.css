@@ -297,3 +297,9 @@ button,input,select,textarea{font-family:inherit}
 @keyframes szpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
 @media (prefers-reduced-motion:reduce){.sz-badge svg{animation:none}}
 .sz-greet{background:linear-gradient(120deg,#5b21b6 0%,#db2777 55%,#f97316 100%)!important;box-shadow:0 12px 30px -12px rgba(219,39,119,.6)}
+
+/* deal strip (home, time-limited) */
+.deal-track{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 2px 14px;-webkit-overflow-scrolling:touch}
+.deal-track::-webkit-scrollbar{display:none}
+.deal-item{flex:0 0 200px;scroll-snap-align:start}
+.deal-item .pcard{height:100%}
