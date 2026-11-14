@@ -1,2 +1,3 @@
-/* Local ShopZent stylesheet entry. Keep this same-origin so the site CSP permits it. */
+/* Load the existing same-origin stylesheet bundle. Same-origin imports are required by the site's CSP. */
 @import url("./core.css");
+@import url("./admin-legacy.css");
