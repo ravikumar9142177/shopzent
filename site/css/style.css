@@ -1,3 +1,5 @@
-/* Load the existing same-origin stylesheet bundle. Same-origin imports are required by the site's CSP. */
+/* Load the existing same-origin stylesheet bundle; keep imports local for CSP. */
 @import url("./core.css");
 @import url("./admin-legacy.css");
+@import url("./highlights.css");
+@import url("./professional-colors.css");

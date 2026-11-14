@@ -1,0 +1,46 @@
+/* Normal-day professional color system. Festival mode is deliberately excluded. */
+html:not(.fz-skin){--purple:#334155;--pink:#475569;--orange:#475569;--ink:#111827;--ink2:#334155;--muted:#64748b;--line:#e2e8f0;--bg:#f8fafc;--grad:linear-gradient(135deg,#0f172a,#334155 56%,#475569);--grad2:linear-gradient(135deg,#1e293b,#475569);--grad3:linear-gradient(135deg,#0f172a,#334155 60%,#475569);--sh:0 1px 2px rgba(15,23,42,.04),0 6px 18px rgba(15,23,42,.07);--sh-lg:0 18px 42px rgba(15,23,42,.14)}
+html:not(.fz-skin) body{color:#111827;background:#f8fafc}
+html:not(.fz-skin) a{color:#334155}
+html:not(.fz-skin) a:hover{color:#0f172a}
+html:not(.fz-skin) .hdr{background:rgba(15,23,42,.97)!important;border-bottom-color:rgba(255,255,255,.1)!important}
+html:not(.fz-skin) .hdr .search button{background:#334155!important}
+html:not(.fz-skin) .hdr .icon-btn:hover{color:#fff;background:rgba(255,255,255,.12)!important}
+html:not(.fz-skin) .nav a:hover,html:not(.fz-skin) .nav a.active{background:#334155!important;color:#fff!important}
+html:not(.fz-skin) .btn:not(.sec):not(.ghost){background:#1e293b!important;background-image:linear-gradient(180deg,rgba(255,255,255,.08),transparent 55%)!important;color:#fff!important;box-shadow:0 2px 0 #0f172a,0 5px 12px rgba(15,23,42,.14)!important}
+html:not(.fz-skin) .btn:not(.sec):not(.ghost):hover{background-color:#334155!important}
+html:not(.fz-skin) .btn.sec,html:not(.fz-skin) .btn.ghost{color:#334155!important;border-color:#cbd5e1!important}
+html:not(.fz-skin) .btn.ghost{background:#fff!important}
+html:not(.fz-skin) .tag.pink,html:not(.fz-skin) .tag.orange,html:not(.fz-skin) .eyebrow,html:not(.fz-skin) .mkt.shopzent{color:#334155!important;background:#f1f5f9!important;border-color:#e2e8f0!important}
+html:not(.fz-skin) .tag.pink,html:not(.fz-skin) .tag.orange{border:1px solid #e2e8f0}
+html:not(.fz-skin) .phead{background:linear-gradient(135deg,#f8fafc,#f1f5f9)!important}
+html:not(.fz-skin) .hero{color:#fff!important;background:linear-gradient(135deg,#0f172a,#1e293b 65%,#334155)!important;background-image:none!important}
+html:not(.fz-skin) .hero::before{background:conic-gradient(from 0deg,transparent,rgba(148,163,184,.12),transparent 35%,rgba(255,255,255,.08),transparent 70%)!important}
+html:not(.fz-skin) .hero::after{background:linear-gradient(180deg,rgba(15,23,42,.12),rgba(15,23,42,.42))!important}
+html:not(.fz-skin) .sec-h h2{color:#0f172a!important;background:none!important;-webkit-text-fill-color:#0f172a!important}
+html:not(.fz-skin) .cat .ic,html:not(.fz-skin) .cats .cat .ic{color:#fff!important;background:linear-gradient(145deg,#334155,#0f172a)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 4px 10px rgba(15,23,42,.15)!important}
+html:not(.fz-skin) .cat,html:not(.fz-skin) .pcard{border-color:#e2e8f0!important;box-shadow:0 3px 12px rgba(15,23,42,.07)!important}
+html:not(.fz-skin) .pcard .wish.on,html:not(.fz-skin) .wish.on{color:#0f172a!important}
+html:not(.fz-skin) .offer{background:linear-gradient(140deg,#1e293b,#334155)!important;border-color:#cbd5e1!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 6px 16px rgba(15,23,42,.14)!important}
+html:not(.fz-skin) .offer .go{color:#0f172a!important}
+html:not(.fz-skin) .offer-dots i.on{background:#334155!important}
+html:not(.fz-skin) .games-card{background:linear-gradient(135deg,#0f172a,#1e293b 70%,#334155)!important;box-shadow:0 8px 20px rgba(15,23,42,.16)!important}
+html:not(.fz-skin) .gc-go{color:#e2e8f0!important}
+html:not(.fz-skin) .price3d .p3{background:linear-gradient(145deg,#334155,#0f172a)!important;box-shadow:0 6px 16px rgba(15,23,42,.16)!important}
+html:not(.fz-skin) .price3d .p3 span{background:rgba(255,255,255,.16)!important}
+html:not(.fz-skin) .coupon{background:linear-gradient(120deg,#0f172a,#334155)!important;color:#fff!important;border-color:#475569!important}
+html:not(.fz-skin) .coupon .pct,html:not(.fz-skin) .coupon .pct small{color:#fff!important}
+html:not(.fz-skin) .coupon code{background:#fff!important;color:#0f172a!important;border-color:#94a3b8!important}
+html:not(.fz-skin) .feat-coupon{background:linear-gradient(115deg,#f1f5f9,#fff 46%,#e2e8f0)!important;color:#0f172a!important;border-color:#cbd5e1!important}
+html:not(.fz-skin) .feat-coupon .pct,html:not(.fz-skin) .feat-coupon .pct small{color:#334155!important}
+html:not(.fz-skin) .feat-coupon .fc-code{color:#0f172a!important;border-color:#64748b!important}
+html:not(.fz-skin) .feat-coupon .btn,html:not(.fz-skin) .feat-coupon button{box-shadow:0 2px 0 #0f172a,0 6px 14px rgba(15,23,42,.14)!important}
+html:not(.fz-skin) .ftr-team{background:#050507!important}
+html:not(.fz-skin) .ftr-team-h{color:#fff!important}
+html:not(.fz-skin) .ftr-team .tm-card{background:linear-gradient(160deg,#191920,#070709 75%)!important}
+html:not(.fz-skin) .adm-side a.active{background:#334155!important;color:#fff!important}
+html:not(.fz-skin) .adm-ag-h{background:linear-gradient(180deg,#263244,#172033)!important}
+html:not(.fz-skin) .adm .kpi.g{background:linear-gradient(135deg,#0f172a,#334155)!important}
+html:not(.fz-skin) .szsec-n{color:#334155!important}
+html:not(.fz-skin) .vp-row:hover{background:#f1f5f9!important}
+@media(prefers-reduced-motion:reduce){html:not(.fz-skin) *,html:not(.fz-skin) *::before,html:not(.fz-skin) *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
