@@ -1,1 +1,2 @@
-@import url("https://raw.githubusercontent.com/ravikumar9142177/shopzent/a64c47774498dd8094b006ae5a0de3f06d41010a/site/css/style.css");
+/* Local ShopZent stylesheet entry. Keep this same-origin so the site CSP permits it. */
+@import url("./core.css");
