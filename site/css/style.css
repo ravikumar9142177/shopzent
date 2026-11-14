@@ -1,5 +1,2 @@
-/* Load the existing same-origin stylesheet bundle; keep imports local for CSP. */
-@import url("./core.css");
-@import url("./admin-legacy.css");
-@import url("./highlights.css");
-@import url("./professional-colors.css");
+@import url("https://raw.githubusercontent.com/ravikumar9142177/shopzent/a64c47774498dd8094b006ae5a0de3f06d41010a/site/css/style.css");
+@import url("./wallet-dashboard-colors.css");
