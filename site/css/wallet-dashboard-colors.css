@@ -1,0 +1,60 @@
+/* Dashboard + wallet: replace the regular-day orange wallet slabs with restrained charcoal/slate surfaces.
+   Festival skin is intentionally untouched. The coin emblem remains gold for recognition. */
+html:not(.fz-skin) body[data-page="wallet"] .wl-card{
+  color:#f8fafc!important;
+  background:radial-gradient(110% 90% at 86% 0%,rgba(148,163,184,.22),transparent 48%),linear-gradient(150deg,#111827 0%,#1e293b 58%,#0f172a 100%)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,0 2px 0 rgba(255,255,255,.08) inset,0 12px 0 #0b1120,0 24px 42px rgba(15,23,42,.24)!important;
+}
+html:not(.fz-skin) body[data-page="wallet"] .wl-chip{
+  background:linear-gradient(135deg,#e2e8f0,#94a3b8 60%,#475569)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 3px 6px rgba(0,0,0,.28)!important;
+}
+html:not(.fz-skin) body[data-page="wallet"] .wl-coin-card{
+  color:#f8fafc!important;
+  background:radial-gradient(110% 80% at 15% 0%,rgba(148,163,184,.2),transparent 52%),linear-gradient(155deg,#1e293b 0%,#0f172a 62%,#111827 100%)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,0 12px 0 #080d17,0 24px 42px rgba(15,23,42,.22)!important;
+}
+html:not(.fz-skin) body[data-page="wallet"] .wl-coin-card .wl-lbl,
+html:not(.fz-skin) body[data-page="wallet"] .wl-coin-card .tiny{color:#cbd5e1!important;opacity:1}
+html:not(.fz-skin) body[data-page="wallet"] .wl-coin-tx .wl-count{color:#fff;text-shadow:0 2px 12px rgba(148,163,184,.22)}
+html:not(.fz-skin) body[data-page="wallet"] .wl-orb{background:radial-gradient(circle,rgba(148,163,184,.28),rgba(148,163,184,0) 68%)!important}
+html:not(.fz-skin) body[data-page="wallet"] .wl-shine{opacity:.42}
+html:not(.fz-skin) body[data-page="wallet"] .wl-kpis .kpi{
+  border-color:#e2e8f0!important;
+  background:linear-gradient(180deg,#fff,#f8fafc)!important;
+  box-shadow:0 4px 0 #e2e8f0,0 10px 18px rgba(15,23,42,.06)!important;
+}
+html:not(.fz-skin) body[data-page="wallet"] .wl-kpis .kpi.g,
+html:not(.fz-skin) body[data-page="wallet"] .kpi.g,
+html:not(.fz-skin) body[data-page="dashboard"] .kpi.g{
+  color:#fff!important;
+  background:linear-gradient(145deg,#1e293b,#0f172a)!important;
+  border-color:#334155!important;
+  box-shadow:0 4px 0 #0b1120,0 10px 20px rgba(15,23,42,.16)!important;
+}
+html:not(.fz-skin) body[data-page="wallet"] .wl-panel{
+  border:1px solid #e2e8f0!important;
+  background:linear-gradient(180deg,#fff,#f8fafc)!important;
+  box-shadow:0 5px 0 #e2e8f0,0 12px 24px rgba(15,23,42,.06)!important;
+}
+html:not(.fz-skin) body[data-page="wallet"] .wl-qa{
+  color:#1e293b!important;
+  border-color:#e2e8f0!important;
+  background:linear-gradient(180deg,#fff,#f1f5f9)!important;
+  box-shadow:0 4px 0 #e2e8f0,0 8px 16px rgba(15,23,42,.07)!important;
+}
+html:not(.fz-skin) body[data-page="wallet"] .wl-ic,
+html:not(.fz-skin) body[data-page="wallet"] .wl-tbl .wl-ic{
+  color:#334155!important;
+  background:#f1f5f9!important;
+  box-shadow:inset 0 -2px 0 #cbd5e1!important;
+}
+html:not(.fz-skin) body[data-page="wallet"] .wl-amt-s.pos{color:#166534!important}
+html:not(.fz-skin) body[data-page="wallet"] .wl-amt-s.neg{color:#991b1b!important}
+html:not(.fz-skin) body[data-page="dashboard"] .sz-greet{
+  color:#fff!important;
+  background:linear-gradient(145deg,#1e293b,#0f172a)!important;
+  box-shadow:0 10px 24px rgba(15,23,42,.18)!important;
+}
+html:not(.fz-skin) body[data-page="dashboard"] .sz-greet a{color:#e2e8f0!important}
+@media(prefers-reduced-motion:reduce){html:not(.fz-skin) body[data-page="wallet"] .wl-card{transition:none!important}}
